@@ -1,0 +1,64 @@
+<html>
+
+<body>
+
+    <script src="library/nkn.js"></script>
+    <script src="library/crypto-js.min.js"></script>
+
+    <script>
+        let myAddr = "Loading...";
+        let balance = "Loading...";
+        let client;
+
+        function loadFromSeed(seed) {
+            try {
+                client = new nkn.Client({
+                    seed: seed,
+                });
+                let pubkey = client.getPublicKey();
+                myAddr = nkn.Wallet.publicKeyToAddress(pubkey);
+                return { status: "SUCCESS", seed: client.getSeed() };
+            } catch (error) {
+                return { status: error.toString(), seed: null };
+            }
+        }
+
+        window.addEventListener('message', async function (event) {
+            console.log(event.data);
+            if (event.data.cmd == "getAddress") {
+                event.source.postMessage({ cmd: event.data.cmd, reply: myAddr }, "*");
+            }
+            else if (event.data.cmd == "getBalance") {
+                await client.wallet.getBalance().then((value) => {
+                    balance = value.toString();
+                    event.source.postMessage({ cmd: event.data.cmd, reply: balance }, "*");
+                });
+            } else if (event.data.cmd == "transfer") {
+                
+                if (event.data.amount == '' || +event.data.amount == 0) {
+                    event.source.postMessage({ cmd: event.data.cmd, reply: "Invalid transfer amount" }, "*");
+                    return;
+                }
+
+                transfer(event.data.address, event.data.amount).then((txnHash) => {
+                    event.source.postMessage({ cmd: event.data.cmd, reply: "SUCCESS" }, "*");
+                }).catch((error) => {
+                    event.source.postMessage({ cmd: event.data.cmd, reply: error.toString() }, "*");
+                });
+            } else if (event.data.cmd == "loadFromSeed") {
+                var message = loadFromSeed(event.data.seed);
+                event.source.postMessage({ cmd: event.data.cmd, reply: message.status, seed: message.seed }, "*");
+            }
+
+        });
+
+        function transfer(address, amount) {
+            return client.wallet.transferTo(address, amount, { fee: 0.0, attrs: 'nothing important.' });
+        }
+    </script>
+
+
+
+</body>
+
+</html>

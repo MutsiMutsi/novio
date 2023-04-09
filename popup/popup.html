@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 99%;">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body style="height: 100%;">
+    <iframe id="sandboxFrame" src="../sandbox.html" style="display: none;"></iframe>
+
+    <style>
+        html {
+            height: 500px;
+        }
+
+        .container {
+            margin: 0 !important;
+            padding-left: 0px !important;
+            padding-right: 0px !important;
+        }
+
+        .valueBox {
+            font-family: monospace;
+            background: #00000026;
+            text-align: left;
+            padding-left: 8px;
+        }
+
+        .inputBox {
+            font-family: monospace;
+            background: #00000026;
+            text-align: left;
+            margin-bottom: 1rem;
+        }
+
+        .addressBox {
+            letter-spacing: 20px;
+            font-family: monospace;
+            background: #00000026;
+            padding: 4px;
+            text-align: center;
+        }
+
+        .form-control {
+            background-color: #00000000 !important;
+            color: var(--bs-primary) !important;
+        }
+    </style>
+
+    <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../styles/bootstrap.min.css">
+    <link rel="stylesheet" href="../styles/flatty.css">
+
+    <script src="../library/jquery.min.js"></script>
+    <script src="../library/bootstrap.bundle.min.js"></script>
+    <script src="../library/humane.js"></script>
+
+    <div class="card border-dark mb-3" style="max-width: 25rem; height: 100%;">
+        <div class="card-header" style="text-align: center;">
+            <h1>Narwhallet
+                <img src="../images/icon-32x32.png"></img>
+            </h1>
+        </div>
+
+        <div id="importBox" class="card-body" style="width: 25rem;">
+            <h4>Import Wallet Seed</h4>
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" placeholder="seed" id="seedInput">
+                <button class="btn btn-primary" type="button" id="importButton">Load</button>
+            </div>
+            <p>Leave empty to generate a new wallet</p>
+        </div>
+
+        <div id="walletBox" class="card-body" style="width: 25rem; display: none;">
+            <div class="row">
+                <div class="col-10">
+                    <h4>Address</h4>
+                </div>
+
+                <div class="col-2" style="text-align: right;">
+                    <i id="deleteButton" class="bi bi-trash" style="cursor: pointer;"></i>
+                </div>
+            </div>
+            <p class="card-text addressBox" id="address">
+                Loading...
+            </p>
+            <h4>Balance</h4>
+            <p class="card-text valueBox" id="balance">
+                Loading...
+            </p>
+            <h4>Transfer</h4>
+            <div class="inputBox">
+                <input type="text" class="form-control" placeholder="Wallet" id="transferToAddress">
+                <div class="input-group">
+                    <input type="number" class="form-control" placeholder="Amount" id="transferToAmount">
+                    <button class="btn btn-outline-primary" type="button" id="sendButton">Send</button>
+                </div>
+            </div>
+
+            <div id="donationBox" style="display: none;">
+                <p id="connectedPage">Not connected to page</p>
+                <input type="text" class="form-control" disabled="true" placeholder="Wallet" id="donateToAddress">
+            </div>
+        </div>
+
+    </div>
+
+    <script src="./popup_script.js"></script>
+</body>
+
+</html>
