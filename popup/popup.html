@@ -34,6 +34,7 @@
             background: #00000026;
             text-align: left;
             margin-bottom: 1rem;
+            height: auto;
         }
 
         .addressBox {
@@ -69,12 +70,12 @@
             <h4>Import Wallet Seed</h4>
             <div class="input-group mb-3">
                 <input type="text" class="form-control" placeholder="seed" id="seedInput">
-                <button class="btn btn-primary" type="button" id="importButton">Load</button>
+                <button class="btn btn-outline-primary" type="button" id="importButton">Load</button>
             </div>
             <p>Leave empty to generate a new wallet</p>
         </div>
 
-        <div id="walletBox" class="card-body" style="width: 25rem; display: none;">
+        <div id="walletBox" class="card-body" style="width: 25rem; display: none; height: auto;">
             <div class="row">
                 <div class="col-10">
                     <h4>Address</h4>
@@ -92,6 +93,14 @@
                 Loading...
             </p>
             <h4>Transfer</h4>
+
+            <div class="row">
+                <div id="minFee" class="col-4" style="text-align: left;"></div>
+                <div id="avgFee" class="col-4" style="text-align: center;">Loading Fees</div>
+                <div id="maxFee" class="col-4" style="text-align: right;"></div>
+            </div>
+            <input id="feeRange" type="range" class="form-range" value="1" min="0" max="2">
+
             <div class="inputBox">
                 <input type="text" class="form-control" placeholder="Wallet" id="transferToAddress">
                 <div class="input-group">
@@ -99,11 +108,34 @@
                     <button class="btn btn-outline-primary" type="button" id="sendButton">Send</button>
                 </div>
             </div>
-
-            <div id="donationBox" style="display: none;">
-                <p id="connectedPage">Not connected to page</p>
-                <input type="text" class="form-control" disabled="true" placeholder="Wallet" id="donateToAddress">
+            <div id="lastTxInfoBox" style="display: none;">
+                <div class="row">
+                    <div class="col-8">
+                        <div id="lastTxHash" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <i id="lastTxPending" class="bi bi-question-circle"> pending</i>
+                        <i id="lastTxConfirmed" class="bi bi-check-circle"> confirmed</i>
+                    </div>
+                </div>
             </div>
+        </div>
+        <div id="deleteWalletBox" class="card-body" style="width: 25rem; display: none;">
+            <h4>Are you sure?</h4>
+            <p>Make sure you have a backup of your seed!
+            <details id="deleteDetails">
+                <summary>Seed</summary>
+            </details>
+            </p>
+
+            <div class="input-group mb-3">
+                <button class="btn btn-outline-primary" type="button" id="deleteConfirmButton">Delete</button>
+                <button class="btn btn-outline-primary" type="button" id="deleteCancelButton">Cancel</button>
+            </div>
+        </div>
+        <div class="card-body" id="pageAddressBox" style="display: none;">
+            <p id="connectedPage">Not connected to page</p>
         </div>
 
     </div>

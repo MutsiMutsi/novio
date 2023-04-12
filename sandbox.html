@@ -8,53 +8,132 @@
     <script>
         let myAddr = "Loading...";
         let balance = "Loading...";
-        let client;
+        let wallet;
 
         function loadFromSeed(seed) {
             try {
-                client = new nkn.Client({
+                wallet = new nkn.Wallet({
                     seed: seed,
+                    tls: true,
                 });
-                let pubkey = client.getPublicKey();
-                myAddr = nkn.Wallet.publicKeyToAddress(pubkey);
-                return { status: "SUCCESS", seed: client.getSeed() };
+
+                myAddr = wallet.address;
+
+                /* 
+                let walletJson = wallet.toJSON();
+                let wallet = nkn.Wallet.fromJSON(walletJson, { password: '' });
+                let correctPassword = wallet.verifyPassword('password');*/
+
+
+                return { status: "SUCCESS", seed: wallet.account.key.seed };
             } catch (error) {
-                return { status: error.toString(), seed: null };
+                return { status: error.message, seed: null };
             }
         }
 
         window.addEventListener('message', async function (event) {
-            console.log(event.data);
             if (event.data.cmd == "getAddress") {
                 event.source.postMessage({ cmd: event.data.cmd, reply: myAddr }, "*");
             }
             else if (event.data.cmd == "getBalance") {
-                await client.wallet.getBalance().then((value) => {
+                await wallet.getBalance().then((value) => {
                     balance = value.toString();
                     event.source.postMessage({ cmd: event.data.cmd, reply: balance }, "*");
                 });
             } else if (event.data.cmd == "transfer") {
-                
+                handleTransferCommand(event);
+            } else if (event.data.cmd == "loadFromSeed") {
+                var message = loadFromSeed(event.data.seed);
+                event.source.postMessage({ cmd: event.data.cmd, reply: message.status, seed: message.seed }, "*");
+            }
+            else if (event.data.cmd == "getTransaction") {
+                getTransaction(event.data.hash).then((result) => {
+                    event.source.postMessage({ cmd: event.data.cmd, reply: result }, "*");
+                }).catch((error) => {
+                    //nkn sdk library throws exceptions, digest.
+                    console.log("Transaction not yet confirmed")
+                });
+            } else if (event.data.cmd == "getFee") {
+                event.source.postMessage({ cmd: event.data.cmd, reply: await getFee() }, "*");
+            }
+        });
+
+        async function handleTransferCommand(event) {
+            try {
                 if (event.data.amount == '' || +event.data.amount == 0) {
                     event.source.postMessage({ cmd: event.data.cmd, reply: "Invalid transfer amount" }, "*");
                     return;
                 }
 
-                transfer(event.data.address, event.data.amount).then((txnHash) => {
-                    event.source.postMessage({ cmd: event.data.cmd, reply: "SUCCESS" }, "*");
+                var recipientAddress = event.data.address;
+
+                //If the address is not a valid nkn address, attempt to resolve a name registration
+                var isValidNknAddress = nkn.Wallet.verifyAddress(recipientAddress);
+                if (!isValidNknAddress) {
+                    var registrantResult = await wallet.getRegistrant(recipientAddress);
+                    if (registrantResult.expiresAt > 0) {
+                        recipientAddress = nkn.Wallet.publicKeyToAddress(registrantResult.registrant);
+                    } else {
+                        event.source.postMessage({ cmd: event.data.cmd, reply: `Name ${recipientAddress} is not registered` }, "*");
+                        return; 
+                    }
+                }
+
+                transfer(recipientAddress, event.data.amount, event.data.fee).then((txnHash) => {
+                    event.source.postMessage({ cmd: event.data.cmd, reply: "SUCCESS", hash: txnHash }, "*");
                 }).catch((error) => {
-                    event.source.postMessage({ cmd: event.data.cmd, reply: error.toString() }, "*");
+                    let shortErr = error.message.split(':').pop().trim();
+                    shortErr = shortErr.replace("not sufficient", "insufficient");
+                    event.source.postMessage({ cmd: event.data.cmd, reply: shortErr }, "*");
                 });
-            } else if (event.data.cmd == "loadFromSeed") {
-                var message = loadFromSeed(event.data.seed);
-                event.source.postMessage({ cmd: event.data.cmd, reply: message.status, seed: message.seed }, "*");
+            } catch (error) {
+                event.source.postMessage({ cmd: event.data.cmd, reply: error.message }, "*");
+            }
+        }
+
+        function transfer(address, amount, fee) {
+            return wallet.transferTo(address, amount, { fee: fee, attrs: 'nothing important.' });
+        }
+
+        function getTransaction(hash) {
+            return nkn.rpc.rpcCall(wallet.options.rpcServerAddr, 'gettransaction', { "hash": hash });
+        }
+
+        function getMempool() {
+            return nkn.rpc.rpcCall(wallet.options.rpcServerAddr, 'getrawmempool', { "action": "addresslist" });
+        }
+
+        function getMempoolAddressTxn(address) {
+            return nkn.rpc.rpcCall(wallet.options.rpcServerAddr, 'getrawmempool', { "action": "txnlist", "address": address });
+        }
+
+        async function getFee() {
+            var mempool = await getMempool();
+
+            const sumOfTxCount = mempool.reduce((acc, curr) => {
+                return acc + curr.txcount;
+            }, 0);
+
+            var txList = [];
+            for (let i = 0; i < mempool.length; i++) {
+                txList = txList.concat(await getMempoolAddressTxn(mempool[i].address));
             }
 
-        });
+            if (sumOfTxCount < 10) {
+                return { min: 0, avg: 0, max: 0.01 };
+            } else {
+                // Extract the 'fee' values from the 'result' array
+                const fees = txList.map(result => result.fee);
 
-        function transfer(address, amount) {
-            return client.wallet.transferTo(address, amount, { fee: 0.0, attrs: 'nothing important.' });
+                // Calculate the minimum, maximum, and average of 'fee'
+                const minFee = Math.min(...fees);
+                const maxFee = Math.max(...fees);
+                const avgFee = fees.reduce((acc, curr) => acc + curr, 0) / fees.length;
+
+                return { min: 0, avg: avgFee, max: maxFee + 0.01 };
+            }
         }
+
     </script>
 
 

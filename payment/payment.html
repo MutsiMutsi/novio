@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 99%;">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Narwhallet Pay</title>
+</head>
+
+<body style="height: 100%;">
+    <iframe id="sandboxFrame" src="../sandbox.html" style="display: none;"></iframe>
+
+    <style>
+        html {
+            height: 320px;
+        }
+
+        .container {
+            margin: 0 !important;
+            padding-left: 0px !important;
+            padding-right: 0px !important;
+        }
+
+        .valueBox {
+            font-family: monospace;
+            background: #00000026;
+            text-align: left;
+            padding-left: 8px;
+        }
+
+        .inputBox {
+            font-family: monospace;
+            background: #00000026;
+            text-align: left;
+            margin-bottom: 1rem;
+            height: auto;
+        }
+
+        .addressBox {
+            letter-spacing: 20px;
+            font-family: monospace;
+            background: #00000026;
+            padding: 4px;
+            text-align: center;
+        }
+
+        .form-control {
+            background-color: #00000000 !important;
+            color: var(--bs-primary) !important;
+        }
+    </style>
+
+    <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../styles/bootstrap.min.css">
+    <link rel="stylesheet" href="../styles/flatty.css">
+
+
+    <div class="card border-dark mb-3" style="max-width: 25rem; height: 100%;">
+        <div class="card-header" style="text-align: center;">
+            <h1>Narwhallet Pay
+                <img src="../images/icon-32x32.png"></img>
+            </h1>
+        </div>
+
+        <div class="card-body" style="width: 25rem;">
+            <h4>Amount</h4>
+            <p class="card-text valueBox form-control" id="paymentAmount" disabled="true"></p>
+            <h4>To</h4>
+            <p class="card-text valueBox form-control" id="paymentAddress" disabled="true"></p>
+            <div class="row">
+                <div id="minFee" class="col-4" style="text-align: left;"></div>
+                <div id="avgFee" class="col-4" style="text-align: center;">Loading Fees</div>
+                <div id="maxFee" class="col-4" style="text-align: right;"></div>
+            </div>
+            <input id="feeRange" type="range" class="form-range" value="1" min="0" max="2">
+            <button class="btn btn-outline-primary" style="width:100%" disabled="true" type="button"
+                id="payButton">Pay</button>
+        </div>
+    </div>
+
+
+    <script src="../library/jquery.min.js"></script>
+    <script src="../library/bootstrap.bundle.min.js"></script>
+    <script src="../library/humane.js"></script>
+
+    <script src="./payment_script.js"></script>
+</body>
+
+</html>
