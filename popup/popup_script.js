@@ -6,11 +6,46 @@ let fees = {
     avg: 0,
     max: 0.01
 };
+let qrcode;
+const explorerTxEndpoint = "https://nscan.io/transactions/";
+let transactionHistory = [];
+
+function getCopyValueElement(element) {
+    let copyElement = document.createElement('i');
+    copyElement.classList.add("bi");
+    copyElement.classList.add("bi-subtract");
+    copyElement.classList.add("copyValue");
+
+    copyElement.onclick = () => {
+        navigator.clipboard.writeText(element.innerText);
+    };
+
+    element.appendChild(copyElement);
+}
 
 //Listen to sandbox replies
 window.addEventListener('message', function (event) {
     if (event.data.cmd == 'getAddress') {
-        document.getElementById("address").innerHTML = event.data.reply;
+        var addressElement = document.getElementById("address");
+        addressElement.innerHTML = `${event.data.reply}`
+        getCopyValueElement(addressElement);
+
+        var addressElement = document.getElementById("addressDelete");
+        addressElement.innerHTML = `${event.data.reply}`
+        getCopyValueElement(addressElement);
+
+        if (qrcode) {
+            qrcode.makeCode(event.data.reply);
+        } else {
+            qrcode = new QRCode(document.getElementById("qrcode"), {
+                text: event.data.reply,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#FFFFFF",
+                correctLevel: QRCode.CorrectLevel.L
+            });
+        }
     }
     else if (event.data.cmd == 'getBalance') {
         document.getElementById("balance").innerHTML = event.data.reply;
@@ -46,6 +81,9 @@ window.addEventListener('message', function (event) {
             document.getElementById("transferToAddress").value = '';
             document.getElementById("transferToAmount").value = '';
 
+            addTransactionRow("Transfer", event.data.amount, event.data.hash);
+            humane.log("Transfer sent awaiting confirmation!");
+
             //Poll for transaction
             this.clearInterval(getTransactionIntervalId);
             getTransactionIntervalId = setInterval(() => {
@@ -54,12 +92,6 @@ window.addEventListener('message', function (event) {
                     hash: event.data.hash
                 }, "*");
             }, 3000)
-
-            //Show last tx box
-            document.getElementById("lastTxInfoBox").style.display = 'block';
-            document.getElementById("lastTxHash").innerHTML = event.data.hash;
-            document.getElementById("lastTxPending").style.display = 'block';
-            document.getElementById("lastTxConfirmed").style.display = 'none';
         } else {
             humane.log(event.data.reply);
         }
@@ -69,8 +101,6 @@ window.addEventListener('message', function (event) {
         if (event.data.reply != null) {
             clearInterval(getTransactionIntervalId);
             humane.log("Transfer Confirmed!");
-            document.getElementById("lastTxPending").style.display = 'none';
-            document.getElementById("lastTxConfirmed").style.display = 'block';
             iframe.contentWindow.postMessage({
                 cmd: 'getBalance'
             }, "*");
@@ -87,19 +117,22 @@ iframe.onload = function () {
 function Startup() {
     document.getElementById("importButton").addEventListener("click", importWallet);
     document.getElementById("sendButton").addEventListener("click", transfer);
-    document.getElementById("deleteButton").addEventListener("click", deleteWallet);
+    document.getElementById("editWalletButton").addEventListener("click", editWallet);
+    document.getElementById("closeEditWalletButton").addEventListener("click", stopEditWallet);
+
+    document.getElementById("deleteWalletButton").addEventListener("click", openDeleteBox)
     document.getElementById("deleteConfirmButton").addEventListener("click", confirmDelete);
     document.getElementById("deleteCancelButton").addEventListener("click", cancelDelete);
 
     //Inject the seed into view when toggled, remove when untoggled.
-    let details = document.getElementById("deleteDetails");
+    let details = document.getElementById("seedDetails");
     details.addEventListener("toggle", (event) => {
         if (details.open) {
             /* the element was toggled open */
-            details.innerHTML = `<summary>Seed</summary>` + seed;
+            details.innerHTML = `<summary>Hide seed</summary>` + `<p class="card-text valueBox">${seed}</p>`;
         } else {
             /* the element was toggled closed */
-            details.innerHTML = `<summary>Seed</summary>`;
+            details.innerHTML = `<summary>Reveal seed</summary>`;
         }
     });
 
@@ -112,6 +145,8 @@ function Startup() {
     chrome.runtime.sendMessage({
         message: "getPageAddress",
     });
+
+    loadTransactionHistory();
 }
 
 function importWallet() {
@@ -152,21 +187,41 @@ function loadFromSeed(seed) {
     }, "*");
 }
 
-function deleteWallet() {
+function hideAll() {
+    document.getElementById("importBox").style.display = 'none';
     document.getElementById("walletBox").style.display = 'none';
-    document.getElementById("deleteWalletBox").style.display = 'block';
-    document.getElementById("deleteDetails").removeAttribute("open");
+    document.getElementById("editWalletBox").style.display = 'none';
+    document.getElementById("deleteWalletBox").style.display = 'none';
+    document.getElementById("seedDetails").removeAttribute("open");
+}
+
+function showBox(boxName) {
+    hideAll();
+    document.getElementById(boxName).style.display = 'block';
+}
+
+function editWallet() {
+    showBox("editWalletBox");
+}
+
+function stopEditWallet() {
+    showBox("walletBox");
+}
+
+function openDeleteBox() {
+    showBox("deleteWalletBox");
 }
 
 function confirmDelete() {
     chrome.storage.local.set({ seed: null }, null);
-    document.getElementById("importBox").style.display = 'block';
-    document.getElementById("deleteWalletBox").style.display = 'none';
+    chrome.storage.local.set({ txHistory: null }, null);
+    document.getElementById("seedInput").value = "";
+    $("#transactionBox").empty();
+    showBox("importBox");
 }
 
 function cancelDelete() {
-    document.getElementById("walletBox").style.display = 'block';
-    document.getElementById("deleteWalletBox").style.display = 'none';
+    showBox("editWalletBox");
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -175,3 +230,61 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         document.getElementById("connectedPage").innerHTML = `<i class="bi bi-check"></i>page connected<br>${request.data}`;
     }
 });
+
+function loadTransactionHistory() {
+    chrome.storage.local.get(["txHistory"]).then((result) => {
+        if (result.txHistory) {
+            transactionHistory = result.txHistory;
+            result.txHistory.forEach(tx => {
+                $("#transactionBox").append(createTransactionRow(tx.type, tx.value, tx.txHash));
+            });
+        }
+    });
+}
+
+function addTransactionRow(type, value, txHash) {
+    transactionHistory.push({
+        date: +new Date(),
+        type: type,
+        value: value,
+        txHash: txHash
+    })
+    $("#transactionBox").prepend(createTransactionRow(type, value, txHash));
+    chrome.storage.local.set({ txHistory: transactionHistory }, null);
+}
+
+function createTransactionRow(type, value, txHash) {
+    var explorer = `<a href="${explorerTxEndpoint + txHash}" target="_blank">explorer <i class="bi-box-arrow-up-right" style="color: var(--bs-secondary);"></i></a>`;
+    var rowElement = $(`
+    <div class="transactionRow hover-box">
+        <div class="dismiss-box" id="dismiss-box">
+            <p class="bi bi-trash text-center"></p>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="bi bi-credit-card" style="height: 100% height: 100%; color: var(--bs-primary); font-weight: normal;"> ${type}</div>
+            </div>
+            <div class="col-8" style="text-align: right;">
+                ${value}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-8">
+                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${txHash}
+                </div>
+            </div>
+            <div class="col-4" style="text-align: right;">
+                ${explorer}
+            </div>
+        </div>
+    </div>`);
+
+    $(rowElement).find("#dismiss-box").on("click", function () {
+        $(rowElement).remove();
+        transactionHistory = transactionHistory.filter(item => item.txHash !== txHash);
+        chrome.storage.local.set({ txHistory: transactionHistory }, null);
+    });
+
+    return rowElement;
+}

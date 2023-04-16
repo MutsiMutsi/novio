@@ -8,49 +8,10 @@
     <title>Document</title>
 </head>
 
-<body style="height: 100%;">
+<body style="height: auto;">
     <iframe id="sandboxFrame" src="../sandbox.html" style="display: none;"></iframe>
 
-    <style>
-        html {
-            height: 500px;
-        }
-
-        .container {
-            margin: 0 !important;
-            padding-left: 0px !important;
-            padding-right: 0px !important;
-        }
-
-        .valueBox {
-            font-family: monospace;
-            background: #00000026;
-            text-align: left;
-            padding-left: 8px;
-        }
-
-        .inputBox {
-            font-family: monospace;
-            background: #00000026;
-            text-align: left;
-            margin-bottom: 1rem;
-            height: auto;
-        }
-
-        .addressBox {
-            letter-spacing: 20px;
-            font-family: monospace;
-            background: #00000026;
-            padding: 4px;
-            text-align: center;
-        }
-
-        .form-control {
-            background-color: #00000000 !important;
-            color: var(--bs-primary) !important;
-        }
-    </style>
-
+    <link rel="stylesheet" href="../styles/wallet.css">
     <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/font/bootstrap-icons.css">
     <link rel="stylesheet" href="../styles/bootstrap.min.css">
     <link rel="stylesheet" href="../styles/flatty.css">
@@ -58,9 +19,10 @@
     <script src="../library/jquery.min.js"></script>
     <script src="../library/bootstrap.bundle.min.js"></script>
     <script src="../library/humane.js"></script>
+    <script src="../library/qrcode.min.js"></script>
 
     <div class="card border-dark mb-3" style="max-width: 25rem; height: 100%;">
-        <div class="card-header" style="text-align: center;">
+        <div class="card-header border-primary" style="text-align: center;">
             <h1>Narwhallet
                 <img src="../images/icon-32x32.png"></img>
             </h1>
@@ -77,63 +39,99 @@
 
         <div id="walletBox" class="card-body" style="width: 25rem; display: none; height: auto;">
             <div class="row">
-                <div class="col-10">
+                <div class="col-8">
                     <h4>Address</h4>
                 </div>
-
-                <div class="col-2" style="text-align: right;">
-                    <i id="deleteButton" class="bi bi-trash" style="cursor: pointer;"></i>
+                <div class="col-4" style="text-align: right;">
+                    <i id="editWalletButton" class="bi bi-chevron-expand copyValue"></i>
                 </div>
             </div>
-            <p class="card-text addressBox" id="address">
+            <p class="card-text valueBox" id="address">
                 Loading...
             </p>
             <h4>Balance</h4>
             <p class="card-text valueBox" id="balance">
                 Loading...
             </p>
-            <h4>Transfer</h4>
 
-            <div class="row">
-                <div id="minFee" class="col-4" style="text-align: left;"></div>
-                <div id="avgFee" class="col-4" style="text-align: center;">Loading Fees</div>
-                <div id="maxFee" class="col-4" style="text-align: right;"></div>
-            </div>
-            <input id="feeRange" type="range" class="form-range" value="1" min="0" max="2">
 
-            <div class="inputBox">
-                <input type="text" class="form-control" placeholder="Wallet" id="transferToAddress">
-                <div class="input-group">
-                    <input type="number" class="form-control" placeholder="Amount" id="transferToAmount">
-                    <button class="btn btn-outline-primary" type="button" id="sendButton">Send</button>
-                </div>
-            </div>
-            <div id="lastTxInfoBox" style="display: none;">
-                <div class="row">
-                    <div class="col-8">
-                        <div id="lastTxHash" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#transfer" aria-selected="true"
+                        role="tab">Transfer</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" data-bs-toggle="tab" href="#history" aria-selected="false" role="tab"
+                        tabindex="-1">History</a>
+                </li>
+            </ul>
+            <div id="contentTabs" class="tab-content">
+                <div class="tab-pane fade active show" id="transfer" role="tabpanel">
+                    <div class="row">
+                        <div id="minFee" class="col-4" style="text-align: left;"></div>
+                        <div id="avgFee" class="col-4" style="text-align: center;">Loading Fees</div>
+                        <div id="maxFee" class="col-4" style="text-align: right;"></div>
+                    </div>
+                    <input id="feeRange" type="range" class="form-range" value="1" min="0" max="2">
+                    <div class="inputBox">
+                        <input type="text" class="form-control" placeholder="Name or Address" id="transferToAddress">
+                        <div class="input-group">
+                            <input type="number" class="form-control" placeholder="Amount" id="transferToAmount">
+                            <button class="btn btn-outline-primary" type="button" id="sendButton">Send</button>
                         </div>
                     </div>
-                    <div class="col-4">
-                        <i id="lastTxPending" class="bi bi-question-circle"> pending</i>
-                        <i id="lastTxConfirmed" class="bi bi-check-circle"> confirmed</i>
+                </div>
+                <div class="tab-pane fade" id="history" role="tabpanel">
+                    <div style="width: 23rem; display: block;">
+                        <div id="transactionBox" class="card border-dark transactionBox" style="max-width: 25rem;">
+                            <div class="transactionRow transactionRow-initial">
+                                <div class="row text-center">
+                                    You have no history
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div id="deleteWalletBox" class="card-body" style="width: 25rem; display: none;">
-            <h4>Are you sure?</h4>
-            <p>Make sure you have a backup of your seed!
-            <details id="deleteDetails">
-                <summary>Seed</summary>
+
+
+        <div id="editWalletBox" class="card-body" style="width: 25rem; display: none;">
+            <div class="row">
+                <div class="col-8">
+                    <h4>Address</h4>
+                </div>
+                <div class="col-4" style="text-align: right;">
+                    <i id="closeEditWalletButton" class="bi bi-chevron-contract copyValue"></i>
+                </div>
+            </div>
+            <p class="card-text valueBox" id="addressDelete">
+                Loading...
+            </p>
+
+            <div id="qrcode" style="display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 16px;"></div>
+
+            <details id="seedDetails">
+                <summary>Reveal seed</summary>
             </details>
             </p>
 
+            <button id="deleteWalletButton" class="btn btn-outline-primary">delete</button>
+        </div>
+
+        <div id="deleteWalletBox" class="card-body" style="width: 25rem; display: none;">
+            <h4>Are you sure?</h4>
+            <p>Make sure you have a backup of your seed!
+
             <div class="input-group mb-3">
-                <button class="btn btn-outline-primary" type="button" id="deleteConfirmButton">Delete</button>
+                <button class="btn btn-outline-warning" type="button" id="deleteConfirmButton">Delete</button>
                 <button class="btn btn-outline-primary" type="button" id="deleteCancelButton">Cancel</button>
             </div>
         </div>
+
         <div class="card-body" id="pageAddressBox" style="display: none;">
             <p id="connectedPage">Not connected to page</p>
         </div>

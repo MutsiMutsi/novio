@@ -12,6 +12,21 @@ window.addEventListener('message', function (event) {
             }).then(() => {
                 this.window.close();
             })
+
+            chrome.storage.local.get(["txHistory"]).then((result) => {
+                let transactionHistory = result.txHistory;
+                if (!transactionHistory) {
+                    transactionHistory = [];
+                }
+                transactionHistory.push({
+                    date: +new Date(),
+                    type: 'Payment',
+                    value: event.data.amount,
+                    txHash: event.data.hash
+                })
+                chrome.storage.local.set({ txHistory: transactionHistory }, null);
+            });
+
         }
     }
     else if (event.data.cmd == 'loadFromSeed') {
@@ -89,3 +104,4 @@ function transfer(amount, address) {
         fee: selectedFeeValue
     }, "*");
 }
+
