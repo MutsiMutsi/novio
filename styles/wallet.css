@@ -24,6 +24,7 @@ body {
     padding-left: 8px;
     border-radius: 0.375rem;
     border: 1px solid rgba(0, 0, 0, .15);
+    min-height: 24px;
 }
 
 .inputBox {
@@ -74,6 +75,7 @@ body {
     flex: 1 1 auto;
     padding: 1px var(--bs-card-spacer-x);
     border: 1px solid rgba(0, 0, 0, .15);
+    white-space: nowrap;
 }
 
 .hover-box {

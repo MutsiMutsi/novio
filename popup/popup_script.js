@@ -143,7 +143,7 @@ function Startup() {
     });
 
     chrome.runtime.sendMessage({
-        message: "getPageAddress",
+        message: "executeForeground",
     });
 
     loadTransactionHistory();
@@ -223,13 +223,6 @@ function confirmDelete() {
 function cancelDelete() {
     showBox("editWalletBox");
 }
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.message === 'pageDataLoaded') {
-        document.getElementById("pageAddressBox").style.display = 'block'
-        document.getElementById("connectedPage").innerHTML = `<i class="bi bi-check"></i>page connected<br>${request.data}`;
-    }
-});
 
 function loadTransactionHistory() {
     chrome.storage.local.get(["txHistory"]).then((result) => {

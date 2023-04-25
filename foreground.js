@@ -1,44 +1,40 @@
-var narwhallet = document.getElementById("narwhallet");
-if (narwhallet) {
-    var address = narwhallet.dataset.address;
-    if (address) {
+if (!document.novioWalletConnected) {
+    document.addEventListener('onNovioTxRequest', novioTxRequestEventHandler);
+    function novioTxRequestEventHandler(event) {
         chrome.runtime.sendMessage({
-            message: "set_page_address",
-            address: address
+            message: "onNovioTxRequest",
+            data: event.detail,
+        }, (response) => {
+            const txResponseEvent = new CustomEvent("onNovioTxResponse", {
+                bubbles: true,
+                cancelable: false,
+                detail: {
+                    type: event.detail.type,
+                    data: response,
+                },
+            });
+            document.dispatchEvent(txResponseEvent);
         });
     }
 
-    var paymentButton = document.getElementById("narwhalletPaymentButton");
-    if (paymentButton) {
-        var dataPayment = {
-            amount: paymentButton.dataset.payment,
-            address: address
-        }
+    const onNovioConnectedEvent = new CustomEvent("onNovioConnected", {
+        "bubbles": true,
+        "cancelable": false,
+        "detail": {},
+    });
+    document.dispatchEvent(onNovioConnectedEvent);
 
-        var paymentInfo = document.getElementById("narwhalletPaymentInfo");
-        paymentInfo.textContent = `${dataPayment.amount} NKN`;
-        paymentButton.style.display = 'block';
-        paymentButton.onclick = () => {
-            chrome.runtime.sendMessage({
-                message: "requestPayment",
-                data: dataPayment,
-            })
-            paymentButton.innerText = "Waiting"
-            paymentButton.disabled = true;
-        }
-        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-            if (request.message === 'requestPaymentResponseForeground') {
-                paymentInfo.innerHTML = `Payment Received<br>✔`;
-                paymentButton.style.display = 'none';
-
-                const txReceivedEvent = new CustomEvent("onTransactionReceived", {
-                    "bubbles": true,
-                    "cancelable": false,
-                    "detail": { hash: request.hash },
-                });
-                document.dispatchEvent(txReceivedEvent);
-            }
+    var port = chrome.runtime.connect({ name: "novio-contentScript" });
+    port.onDisconnect.addListener(function () {
+        document.removeEventListener('onNovioTxRequest', novioTxRequestEventHandler);
+        document.novioWalletConnected = false;
+        const onNovioDisconnectedEvent = new CustomEvent("onNovioDisconnected", {
+            "bubbles": true,
+            "cancelable": false,
+            "detail": {},
         });
-    }
+        document.dispatchEvent(onNovioDisconnectedEvent);
+    });
 }
 
+document.novioWalletConnected = true;
