@@ -53,6 +53,12 @@
                 }).catch((error) => {
                     event.source.postMessage({ cmd: event.data.cmd, reply: { error: error.message } }, "*");
                 });
+            } else if (event.data.cmd == "signMessage") {
+                signChallenge(event.data.data).then(async (result) => {
+                    event.source.postMessage({ cmd: event.data.cmd, reply: { signature: result, publicKey: wallet.account.key.publicKey } }, "*");
+                }).catch((error) => {
+                    event.source.postMessage({ cmd: event.data.cmd, reply: { error: error.message } }, "*");
+                });
             }
         });
 
@@ -103,6 +109,19 @@
 
         function getMempoolAddressTxn(address) {
             return nkn.rpc.rpcCall(wallet.options.rpcServerAddr, 'getrawmempool', { "action": "txnlist", "address": address });
+        }
+
+        async function signChallenge(challenge) {
+            const prefixedMsg = `NKN Signed Message:\n${challenge}`;
+
+            var encoder = new TextEncoder();
+            var encodedMsg = encoder.encode(prefixedMsg);
+
+            const hashedOnce = await crypto.subtle.digest('SHA-256', encodedMsg);
+            const hashedTwice = await crypto.subtle.digest('SHA-256', hashedOnce);
+            var challengeFullform = new Uint8Array(hashedTwice);
+
+            return await nkn.crypto.sign(wallet.account.key.privateKey, challengeFullform);
         }
 
         async function sendTransaction(transaction, fee) {

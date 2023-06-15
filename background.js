@@ -51,7 +51,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         waitingForRequestPage = false;
     }
 
-    if (request.message === 'onNovioTxRequest') {
+    if (request.message === 'onNovioTxRequest' || request.message === 'onNovioSignRequest') {
         if (requestPopupWindow) {
             chrome.windows.remove(requestPopupWindow.id);
             requestPopupWindow = null;
@@ -78,6 +78,10 @@ function openRequest(request, sendResponse) {
         const left = Math.round((tabWindow.width - width) * 0.5 + tabWindow.left)
         const top = Math.round((tabWindow.height - height) * 0.5 + tabWindow.top)
 
+        let url = 'request/request.html';
+        if (request.message === 'onNovioSignRequest') {
+            url = 'request/sign.html';
+        }
         waitingForRequestPage = true;
         requestPopupWindow = await chrome.windows.create({
             width: width,
@@ -86,7 +90,7 @@ function openRequest(request, sendResponse) {
             left: Math.round(left),
             focused: true,
             type: 'popup',
-            url: 'request/request.html',
+            url: url,
         });
         requestTabId = requestPopupWindow.tabs[0].id;
 
@@ -95,20 +99,42 @@ function openRequest(request, sendResponse) {
                 await sleep(50);
             }
 
-            chrome.runtime.sendMessage({
-                message: "transactionRequestData",
-                data: request.data
-            }, (result) => {
-                if (chrome.runtime.lastError) {
-                    console.log(chrome.runtime.lastError);
-                    sendResponse({
-                        error: 'cancelled'
-                    });
-                } else {
-                    sendResponse(result);
-                }
-                requestPopupWindow = null;
-            });
+            if (request.message === 'onNovioTxRequest') {
+                chrome.runtime.sendMessage({
+                    message: "transactionRequestData",
+                    data: request.data
+                }, (result) => {
+                    if (chrome.runtime.lastError) {
+                        console.log(chrome.runtime.lastError);
+                        sendResponse({
+                            error: 'cancelled'
+                        });
+                    } else {
+                        sendResponse(result);
+                    }
+                    requestPopupWindow = null;
+                });
+            }
+            else if (request.message === 'onNovioSignRequest') {
+                chrome.runtime.sendMessage({
+                    message: "signRequestData",
+                    data: request.data
+                }, (result) => {
+                    if (chrome.runtime.lastError) {
+                        console.log(chrome.runtime.lastError);
+                        sendResponse({
+                            error: 'cancelled'
+                        });
+                    } else {
+                        if (requestPopupWindow) {
+                            chrome.windows.remove(requestPopupWindow.id);
+                            requestPopupWindow = null;
+                        }
+                        sendResponse(result);
+                    }
+                    requestPopupWindow = null;
+                });
+            }
         }, 50);
     })
 }

@@ -17,6 +17,24 @@ if (!document.novioWalletConnected) {
         });
     }
 
+    document.addEventListener('onNovioSignRequest', novioSignRequestEventHandler);
+    function novioSignRequestEventHandler(event) {
+        chrome.runtime.sendMessage({
+            message: "onNovioSignRequest",
+            data: event.detail.data,
+        }, (response) => {
+            const signResponseEvent = new CustomEvent("onNovioSignResponse", {
+                bubbles: true,
+                cancelable: false,
+                detail: {
+                    type: event.detail.type,
+                    data: response,
+                },
+            });
+            document.dispatchEvent(signResponseEvent);
+        });
+    }
+
     const onNovioConnectedEvent = new CustomEvent("onNovioConnected", {
         "bubbles": true,
         "cancelable": false,
