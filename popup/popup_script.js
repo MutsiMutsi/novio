@@ -8,6 +8,7 @@ let fees = {
 };
 let qrcode;
 const explorerTxEndpoint = "https://nscan.io/transactions/";
+const explorerAddrEndpoint = "https://nscan.io/addresses/";
 let transactionHistory = [];
 
 function getCopyValueElement(element) {
@@ -113,6 +114,9 @@ iframe.src += '';
 iframe.onload = function () {
     Startup();
 };
+
+$("#contactsBox").prepend(createContactRow('peter', "NKNNp6U8yGFeb1N8fHfQunFuDwtgT2t2zJhJ"));
+
 
 function Startup() {
     document.getElementById("importButton").addEventListener("click", importWallet);
@@ -277,6 +281,43 @@ function createTransactionRow(type, value, txHash) {
         $(rowElement).remove();
         transactionHistory = transactionHistory.filter(item => item.txHash !== txHash);
         chrome.storage.local.set({ txHistory: transactionHistory }, null);
+    });
+
+    return rowElement;
+}
+
+function createContactRow(name, value) {
+    var rowElement = $(`
+    <div class="contactRow hover-box">
+        <div class="dismiss-box" id="dismiss-box">
+            <p class="bi bi-trash text-center"></p>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="bi bi-person" style="height: 100% height: 100%; color: var(--bs-primary); font-weight: normal;"> ${name}</div>
+            </div>
+            <div class="col-8" style="text-align: right;">
+                
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div id="valueField" class="valueField" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${value}
+                </div>
+            </div>
+        </div>
+    </div>`);
+
+    debugger;
+    let el = $(rowElement).find("#valueField")[0];
+    getCopyValueElement(el);
+
+
+    $(rowElement).find("#dismiss-box").on("click", function () {
+        $(rowElement).remove();
+        //transactionHistory = transactionHistory.filter(item => item.txHash !== txHash);
+        //chrome.storage.local.set({ txHistory: transactionHistory }, null);
     });
 
     return rowElement;

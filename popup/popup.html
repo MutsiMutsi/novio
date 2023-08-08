@@ -8,6 +8,21 @@
     <title>novio</title>
 </head>
 
+<style>
+    .list-group-item {
+        padding: 0.25rem 0.75rem;
+    }
+
+    .list-group-item h5 {
+        font-size: 1rem;
+    }
+
+    .list-group-item p {
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+
 <body style="height: auto;">
     <iframe id="sandboxFrame" src="../sandbox.html" style="display: none;"></iframe>
 
@@ -25,6 +40,12 @@
         <div class="card-header border-primary" style="text-align: center;">
             <h1>novio
             </h1>
+        </div>
+
+        <div id="contactsBoxInner" class="card-body" style="width: 25rem;">
+            <h4>Contacts</h4>
+            <div id="contactsBox" class="card border-dark transactionBox" style="max-width: 25rem;">
+            </div>
         </div>
 
         <div id="importBox" class="card-body" style="width: 25rem;">
