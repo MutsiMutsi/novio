@@ -91,7 +91,7 @@ window.addEventListener('message', function (event) {
                     cmd: 'getTransaction',
                     hash: event.data.hash
                 }, "*");
-            }, 3000)
+            }, 3000);
         } else {
             humane.log(event.data.reply);
         }
