@@ -59,6 +59,8 @@
                 }).catch((error) => {
                     event.source.postMessage({ cmd: event.data.cmd, reply: { error: error.message } }, "*");
                 });
+            } else if (event.data.cmd == "verifyAddress") {
+                event.source.postMessage({ cmd: event.data.cmd, reply: verifyAddress(event.data.address) }, "*");
             }
         });
 
@@ -177,6 +179,11 @@
 
                 return { min: 0, avg: avgFee, max: maxFee + 0.01 };
             }
+        }
+
+
+        function verifyAddress(address) {
+            return nkn.Wallet.verifyAddress(address);
         }
 
     </script>

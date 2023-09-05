@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="height: 99%;">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -8,136 +8,316 @@
     <title>novio</title>
 </head>
 
-<body style="height: auto;">
+<body style="width: 420px; height: 100%;">
     <iframe id="sandboxFrame" src="../sandbox.html" style="display: none;"></iframe>
-
-    <link rel="stylesheet" href="../styles/wallet.css">
     <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/font/bootstrap-icons.css">
     <link rel="stylesheet" href="../styles/bootstrap.min.css">
-    <link rel="stylesheet" href="../styles/flatty.css">
-
     <script src="../library/jquery.min.js"></script>
     <script src="../library/bootstrap.bundle.min.js"></script>
-    <script src="../library/humane.js"></script>
     <script src="../library/qrcode.min.js"></script>
 
-    <div class="card border-dark mb-3" style="max-width: 25rem; height: 100%;">
-        <div class="card-header border-primary" style="text-align: center;">
-            <h1>novio
-            </h1>
-        </div>
+    <script src="./dashboard.js"></script>
+    <script src="./contacts.js"></script>
+    <script src="./send.js"></script>
+    <script src="./receive.js"></script>
 
-        <div id="importBox" class="card-body" style="width: 25rem;">
-            <h4>Import Wallet Seed</h4>
-            <div class="input-group mb-3">
-                <input type="text" class="form-control" placeholder="seed" id="seedInput">
-                <button class="btn btn-outline-primary" type="button" id="importButton">Load</button>
-            </div>
-            <p>Leave empty to generate a new wallet</p>
-        </div>
+    <style>
+        hr {
+            margin: 1rem 0;
+            color: var(--bs-primary);
+            border: 0;
+            border-top: 2px solid;
+            opacity: 1;
+        }
 
-        <div id="walletBox" class="card-body" style="width: 25rem; display: none; height: auto;">
-            <div class="row">
-                <div class="col-8">
-                    <h4>Address</h4>
+        .buttonColumn {
+            cursor: pointer;
+        }
+
+        .buttonColumn:hover {
+            color: var(--bs-primary);
+            font-weight: bold;
+        }
+
+        .buttonColumn:hover button {
+            color: var(--bs-btn-hover-color);
+            background-color: var(--bs-btn-hover-bg);
+            border-color: #ffc100;
+        }
+
+        .buttonColumn:active button {
+            color: var(--bs-btn-active-color);
+            background-color: var(--bs-btn-active-bg);
+            border-color: var(--bs-btn-active-border-color);
+        }
+
+        .lighterText {
+            color: var(--bs-light);
+        }
+
+        .main-div {
+            position: relative;
+            top: 0;
+            right: 0%;
+            width: inherit;
+            height: 100%;
+            background: inherit;
+            transition: right 0.3s;
+        }
+
+        .overlap-div {
+            position: absolute;
+            top: 0;
+            right: -100%;
+            width: inherit;
+            height: 100%;
+            background: inherit;
+            transition: right 0.3s;
+            visibility: hidden;
+        }
+
+        /* width */
+        ::-webkit-scrollbar {
+            width: 2px;
+        }
+
+        /* Track */
+        ::-webkit-scrollbar-track {
+            background: var(--bs-body-bg);
+        }
+
+        /* Handle */
+        ::-webkit-scrollbar-thumb {
+            background: var(--bs-primary);
+        }
+
+        /* Handle on hover */
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .copyValue {
+            float: right;
+            color: var(--bs-link-color);
+        }
+
+        .copyValue:hover {
+            color: var(--bs-primary);
+            cursor: pointer;
+        }
+
+        .copyValue:active {
+            scale: 1.2;
+        }
+    </style>
+
+    <div class="app-content main-div">
+        <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
+            <h1>novio</h1>
+            <hr>
+        </header>
+
+        <div class="container">
+            <div class="balanceBox mb-3 py-3" style="text-align: center;">
+                <div class="balanceBoxValueNkn lighterText">
+                    <span style="font-size: 38px;"></span>
                 </div>
-                <div class="col-4" style="text-align: right;">
-                    <i id="editWalletButton" class="bi bi-chevron-expand copyValue"></i>
+                <div class="balanceBoxValueUsd">
+                    <span style="font-size: 24px;"></span>
                 </div>
             </div>
-            <p class="card-text valueBox" id="address">
-                Loading...
-            </p>
-            <h4>Balance</h4>
-            <p class="card-text valueBox" id="balance">
-                Loading...
-            </p>
 
-
-            <ul class="nav nav-tabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link active" data-bs-toggle="tab" href="#transfer" aria-selected="true"
-                        role="tab">Transfer</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link" data-bs-toggle="tab" href="#history" aria-selected="false" role="tab"
-                        tabindex="-1">History</a>
-                </li>
-            </ul>
-            <div id="contentTabs" class="tab-content">
-                <div class="tab-pane fade active show" id="transfer" role="tabpanel">
-                    <div class="row">
-                        <div id="minFee" class="col-4" style="text-align: left;"></div>
-                        <div id="avgFee" class="col-4" style="text-align: center;">Loading Fees</div>
-                        <div id="maxFee" class="col-4" style="text-align: right;"></div>
+            <div class="buttonBox mb-3 py-3" style="text-align: center;">
+                <div class="row">
+                    <div class="col buttonColumn" id="SendButton">
+                        <button type="button" class="btn btn-primary rounded-circle">
+                            <span class="bi bi-arrow-up-right"></span>
+                        </button>
+                        <br>
+                        Send
                     </div>
-                    <input id="feeRange" type="range" class="form-range" value="1" min="0" max="2">
-                    <div class="inputBox">
-                        <input type="text" class="form-control" placeholder="Name or Address" id="transferToAddress">
-                        <div class="input-group">
-                            <input type="number" class="form-control" placeholder="Amount" id="transferToAmount">
-                            <button class="btn btn-outline-primary" type="button" id="sendButton">Send</button>
-                        </div>
+                    <div class="col buttonColumn" id="ReceiveButton">
+                        <button type="button" class="btn btn-primary rounded-circle">
+                            <span class="bi bi-arrow-down-left"></span>
+                        </button>
+                        <br>
+                        Receive
+                    </div>
+                    <div class="col buttonColumn" id="ContactsButton">
+                        <button type="button" class="btn btn-primary rounded-circle">
+                            <span class="bi bi-person-lines-fill"></span>
+                        </button>
+                        <br>
+                        Contacts
+                    </div>
+                    <div class="col buttonColumn" id="HistoryButton">
+                        <button type="button" class="btn btn-primary rounded-circle">
+                            <span class="bi bi-clock-history"></span>
+                        </button>
+                        <br>
+                        History
                     </div>
                 </div>
-                <div class="tab-pane fade" id="history" role="tabpanel">
-                    <div style="width: 23rem; display: block;">
-                        <div id="transactionBox" class="card border-dark transactionBox" style="max-width: 25rem;">
-                            <div class="transactionRow transactionRow-initial">
-                                <div class="row text-center">
-                                    You have no history
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
-
-
-        <div id="editWalletBox" class="card-body" style="width: 25rem; display: none;">
-            <div class="row">
-                <div class="col-8">
-                    <h4>Address</h4>
-                </div>
-                <div class="col-4" style="text-align: right;">
-                    <i id="closeEditWalletButton" class="bi bi-chevron-contract copyValue"></i>
-                </div>
-            </div>
-            <p class="card-text valueBox" id="addressDelete">
-                Loading...
-            </p>
-
-            <div id="qrcode" style="display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 16px;"></div>
-
-            <details id="seedDetails">
-                <summary>Reveal seed</summary>
-            </details>
-            </p>
-
-            <button id="deleteWalletButton" class="btn btn-outline-primary">delete</button>
-        </div>
-
-        <div id="deleteWalletBox" class="card-body" style="width: 25rem; display: none;">
-            <h4>Are you sure?</h4>
-            <p>Make sure you have a backup of your seed!
-
-            <div class="input-group mb-3">
-                <button class="btn btn-outline-warning" type="button" id="deleteConfirmButton">Delete</button>
-                <button class="btn btn-outline-primary" type="button" id="deleteCancelButton">Cancel</button>
-            </div>
-        </div>
-
-        <div class="card-body" id="pageAddressBox" style="display: none;">
-            <p id="connectedPage">Not connected to page</p>
-        </div>
-
     </div>
 
-    <script src="./popup_script.js"></script>
+    <!--APP SEND COMPONENT-->
+    <div id="app-send-content" class="overlap-div">
+        <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
+            <button type="button" class="btn btn-outline-secondary" style="float: left;margin-right: -100%;margin-left: 1rem;" id="SendBackButton">
+                <span class="bi bi-arrow-left"></span>
+            </button>
+            <h1>send</h1>
+            <hr>
+        </header>
+        <div class="container" id="SendRecipientContainer">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="enter nkn address or name" id="RecipientInput">
+            </div>
+
+            <div class="list-group" style="max-height: 250px; margin-bottom: 0px; overflow-y:scroll;" id="RecipientResultListGroup">
+
+            </div>
+        </div>
+
+        <div class="container" id="SendAmountContainer" style="display: none;">
+            <div class="input-group">
+                <input type="number" class="form-control" placeholder="0.00000000" id="AmountInput">
+                <div class="input-group-append" id="AmountInputAppendix">
+                    <span class="input-group-text" id="sendAmount">NKN</span>
+                </div>
+            </div>
+            <div class="list-group" style="max-height: 250px; margin-bottom: 0px; overflow-y:scroll;" id="AmountResultListGroup">
+
+            </div>
+        </div>
+
+        <div class="container" id="FeeContainer" style="display: none;">
+            <div id="FeeSelectElements" style="margin-bottom: -8px;">
+                <div class="row">
+                    <div id="minimumFee" class="col-3" style="text-align: left;">slow (0)</div>
+                    <div id="selectedFee" class="col-6" style="text-align: center;">average (6)</div>
+                    <div id="maximumFee" class="col-3" style="text-align: right;">fast (12)</div>
+                </div>
+                <input id="feeRange" type="range" class="form-range" value="6" min="0" max="12" step="1">
+            </div>
+            <div class="list-group" style="max-height: 250px; margin-bottom: 0px; overflow-y:scroll;" id="FeeResultListGroup">
+            </div>
+        </div>
+
+        <div class="container" id="SendConfirmContainer" style="display: none;">
+            <button class="btn btn-primary" style="width: 100%;">Confirm</button>
+        </div>
+    </div>
+
+    <!--APP RECEIVE COMPONENT-->
+    <div id="app-receive-content" class="overlap-div">
+        <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
+            <button type="button" class="btn btn-outline-secondary" style="float: left;margin-right: -100%;margin-left: 1rem;" id="ReceiveBackButton">
+                <span class="bi bi-arrow-left"></span>
+            </button>
+            <h1>receive</h1>
+            <hr>
+        </header>
+        <div class="container">
+            <div class="input-group mb-3">
+                <input type="text" readonly class="form-control text-center" value="NKNTrHTh1CjVNix73ydAkiNS93RRD8PvxpT4" id="ReceiveAddressInput">
+                <div class="input-group-append">
+                    <span class="input-group-text copyValue" id="CopyAddressButton">
+                        <i class="bi bi-clipboard"></i>
+                    </span>
+                </div>
+            </div>
+            <div id="qrcode" style="display: flex; align-items: center; justify-content: center; margin: 16px;"></div>
+        </div>
+    </div>
+
+    <!--APP CONTACTS COMPONENT-->
+    <div id="app-contacts-content" class="overlap-div">
+        <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
+            <button type="button" class="btn btn-outline-secondary" style="position: absolute; left: 1rem; top: 1rem;" id="ContactsBackButton">
+                <span class="bi bi-arrow-left"></span>
+            </button>
+            <h1>contacts</h1>
+            <button type="button" class="btn btn-outline-primary" style="position: absolute; right: 1rem; top: 1rem;" id="ContactsAddButton">
+                <span class="bi bi-person-plus-fill"></span>
+            </button>
+            <hr>
+        </header>
+
+        <div class="container" id="ContactViewContainer" style="display: none;">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" class="form-control" placeholder="enter a name" id="ContactNameInput" readonly>
+            </div>
+
+            <div class="form-group">
+                <label>Address</label>
+                <input type="text" class="form-control" placeholder="enter nkn address" id="ContactAddressInput" readonly>
+            </div>
+
+            <div class="py-3" id="ContactViewButtons">
+                <button class="btn btn-primary" style="width: 100%;" id="ContactEditButton"><i class="bi bi-pencil"></i> Edit</button>
+            </div>
+            <div class="row py-3" id="ContactViewEditButtons">
+                <div class="col">
+                    <button disabled class="btn btn-success" style="width: 100%;" id="ContactSaveButton"><i class="bi bi-save"></i> Save</button>
+                </div>
+                <div class="col">
+                    <button class="btn btn-warning" style="width: 100%;" id="ContactDeleteButton"><i class="bi bi-trash"></i> Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="container" id="ContactListContainer">
+            <div class="list-group" style="max-height: 250px; margin-bottom: 0px; overflow-y:scroll;" id="ContactListGroup">
+            </div>
+        </div>
+    </div>
+
+    <!--APP HISTORY COMPONENT-->
+    <div id="app-history-content" class="overlap-div">
+        <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
+            <button type="button" class="btn btn-outline-secondary" style="position: absolute; left: 1rem; top: 1rem;" id="HistoryBackButton">
+                <span class="bi bi-arrow-left"></span>
+            </button>
+            <h1>history</h1>
+            <hr>
+        </header>
+
+        <div class="container">
+            <div class="list-group" style="max-height: 250px; margin-bottom: 0px; overflow-y:scroll;" id="HistoryListGroup">
+                <button class="list-group-item list-group-item-action" readonly>
+                    <i class="bi bi-credit-card"></i> Transfer
+                    <br>
+                    <small style="color:var(--bs-secondary)">50 NKN</small>
+                    <a href="https://nscan.io/transactions/228692cb092588230465d052301adeb951647790a61507744456dd4f99425e30" target="_blank" style="float: right;">explorer <i class="bi-box-arrow-up-right" style="color: var(--bs-secondary);"></i></a>
+                </button>
+
+                <div class="list-group-item list-group-item-action">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="bi bi-credit-card" style="height: 100%; color: var(--bs-primary); font-weight: normal;"> Transfer</div>
+                        </div>
+                        <div class="col-8" style="text-align: right;">
+                            50 NKN
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-8">
+                            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                228692cb092588230465d052301adeb951647790a61507744456dd4f99425e30
+                            </div>
+                        </div>
+                        <div class="col-4" style="text-align: right;">
+                            <a href="https://nscan.io/transactions/228692cb092588230465d052301adeb951647790a61507744456dd4f99425e30" target="_blank">explorer <i class="bi-box-arrow-up-right" style="color: var(--bs-secondary);"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
