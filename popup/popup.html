@@ -8,122 +8,60 @@
     <title>novio</title>
 </head>
 
-<body style="width: 420px; height: 100%;">
+<body style="width: 420px; height: 324px;">
     <iframe id="sandboxFrame" src="../sandbox.html" style="display: none;"></iframe>
     <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/font/bootstrap-icons.css">
     <link rel="stylesheet" href="../styles/bootstrap.min.css">
+    <link rel="stylesheet" href="../styles/popup.css">
+    <link rel="stylesheet" href="../styles/flatty.css">
+
     <script src="../library/jquery.min.js"></script>
     <script src="../library/bootstrap.bundle.min.js"></script>
     <script src="../library/qrcode.min.js"></script>
+    <script src="../library/humane.js"></script>
 
+    <script src="./popup.js"></script>
     <script src="./dashboard.js"></script>
     <script src="./contacts.js"></script>
     <script src="./send.js"></script>
     <script src="./receive.js"></script>
+    <script src="./history.js"></script>
 
-    <style>
-        hr {
-            margin: 1rem 0;
-            color: var(--bs-primary);
-            border: 0;
-            border-top: 2px solid;
-            opacity: 1;
-        }
+    <div class="app-content" id="SplashContent" style="display: none;">
+        <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
+            <h1>Welcome to novio!</h1>
+            <hr>
+        </header>
 
-        .buttonColumn {
-            cursor: pointer;
-        }
+        <div class="container">
+            <p>To get started you can either import an existing wallet by entering your seed, or you can generate a new wallet.</p>
+            <h5>Import Wallet</h5>
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="enter nkn wallet seed" id="SeedInput" autocomplete="off">
+            </div>
+            <br>
+            <div class="input-group">
+                <button class="btn btn-primary" type="button" id="GenerateSeedButton">Generate Wallet</button>
+            </div>
+        </div>
+    </div>
 
-        .buttonColumn:hover {
-            color: var(--bs-primary);
-            font-weight: bold;
-        }
-
-        .buttonColumn:hover button {
-            color: var(--bs-btn-hover-color);
-            background-color: var(--bs-btn-hover-bg);
-            border-color: #ffc100;
-        }
-
-        .buttonColumn:active button {
-            color: var(--bs-btn-active-color);
-            background-color: var(--bs-btn-active-bg);
-            border-color: var(--bs-btn-active-border-color);
-        }
-
-        .lighterText {
-            color: var(--bs-light);
-        }
-
-        .main-div {
-            position: relative;
-            top: 0;
-            right: 0%;
-            width: inherit;
-            height: 100%;
-            background: inherit;
-            transition: right 0.3s;
-        }
-
-        .overlap-div {
-            position: absolute;
-            top: 0;
-            right: -100%;
-            width: inherit;
-            height: 100%;
-            background: inherit;
-            transition: right 0.3s;
-            visibility: hidden;
-        }
-
-        /* width */
-        ::-webkit-scrollbar {
-            width: 2px;
-        }
-
-        /* Track */
-        ::-webkit-scrollbar-track {
-            background: var(--bs-body-bg);
-        }
-
-        /* Handle */
-        ::-webkit-scrollbar-thumb {
-            background: var(--bs-primary);
-        }
-
-        /* Handle on hover */
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        .copyValue {
-            float: right;
-            color: var(--bs-link-color);
-        }
-
-        .copyValue:hover {
-            color: var(--bs-primary);
-            cursor: pointer;
-        }
-
-        .copyValue:active {
-            scale: 1.2;
-        }
-    </style>
-
-    <div class="app-content main-div">
+    <div class="app-content main-div" style="display: none;" id="DashboardContent">
         <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
             <h1>novio</h1>
+            <button type="button" class="btn btn-outline-danger" style="position: absolute; right: 1rem; top: 1rem; display: block;" id="WalletDeleteButton">
+                <span class="bi bi-trash"></span>
+            </button>
             <hr>
         </header>
 
         <div class="container">
             <div class="balanceBox mb-3 py-3" style="text-align: center;">
                 <div class="balanceBoxValueNkn lighterText">
-                    <span style="font-size: 38px;"></span>
+                    <span style="font-size: 38px;">Loading...</span>
                 </div>
                 <div class="balanceBoxValueUsd">
-                    <span style="font-size: 24px;"></span>
+                    <span style="font-size: 24px;">Loading...</span>
                 </div>
             </div>
 
@@ -195,9 +133,9 @@
 
         <div class="container" id="FeeContainer" style="display: none;">
             <div id="FeeSelectElements" style="margin-bottom: -8px;">
-                <div class="row">
+                <div class="row" style="white-space: nowrap;">
                     <div id="minimumFee" class="col-3" style="text-align: left;">slow (0)</div>
-                    <div id="selectedFee" class="col-6" style="text-align: center;">average (6)</div>
+                    <div id="averageFee" class="col-6" style="text-align: center;">average (6)</div>
                     <div id="maximumFee" class="col-3" style="text-align: right;">fast (12)</div>
                 </div>
                 <input id="feeRange" type="range" class="form-range" value="6" min="0" max="12" step="1">
@@ -207,8 +145,26 @@
         </div>
 
         <div class="container" id="SendConfirmContainer" style="display: none;">
-            <button class="btn btn-primary" style="width: 100%;">Confirm</button>
+            <button class="btn btn-primary" style="width: 100%;" id="SendConfirmButton">Confirm</button>
         </div>
+
+        <div class="container" id="SendStatusContainer" style="display: none;">
+            <div class="text-center" style="width: 100%;height: 100%;position: absolute;top: 0;left: 0;">
+                <div class="lds-ripple" style="display: inline-block;
+                position: relative;
+                width: 80px;
+                height: 80px;
+                top: 46%;
+                left: 1%;
+                scale: 2;">
+                    <div></div>
+                    <div></div>
+                </div>
+                <i id="successIcon" class="bi bi-check2-circle" style="font-size: 200px; color:var(--bs-success); display: none"></i>
+                <i id="failedIcon" class="bi bi-x-circle" style="font-size: 200px; color: var(--bs-danger); display: none;"></i>
+            </div>
+        </div>
+
     </div>
 
     <!--APP RECEIVE COMPONENT-->
@@ -222,7 +178,7 @@
         </header>
         <div class="container">
             <div class="input-group mb-3">
-                <input type="text" readonly class="form-control text-center" value="NKNTrHTh1CjVNix73ydAkiNS93RRD8PvxpT4" id="ReceiveAddressInput">
+                <input type="text" readonly class="form-control text-center" value="" id="ReceiveAddressInput">
                 <div class="input-group-append">
                     <span class="input-group-text copyValue" id="CopyAddressButton">
                         <i class="bi bi-clipboard"></i>
@@ -288,33 +244,6 @@
 
         <div class="container">
             <div class="list-group" style="max-height: 250px; margin-bottom: 0px; overflow-y:scroll;" id="HistoryListGroup">
-                <button class="list-group-item list-group-item-action" readonly>
-                    <i class="bi bi-credit-card"></i> Transfer
-                    <br>
-                    <small style="color:var(--bs-secondary)">50 NKN</small>
-                    <a href="https://nscan.io/transactions/228692cb092588230465d052301adeb951647790a61507744456dd4f99425e30" target="_blank" style="float: right;">explorer <i class="bi-box-arrow-up-right" style="color: var(--bs-secondary);"></i></a>
-                </button>
-
-                <div class="list-group-item list-group-item-action">
-                    <div class="row">
-                        <div class="col-4">
-                            <div class="bi bi-credit-card" style="height: 100%; color: var(--bs-primary); font-weight: normal;"> Transfer</div>
-                        </div>
-                        <div class="col-8" style="text-align: right;">
-                            50 NKN
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-8">
-                            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                228692cb092588230465d052301adeb951647790a61507744456dd4f99425e30
-                            </div>
-                        </div>
-                        <div class="col-4" style="text-align: right;">
-                            <a href="https://nscan.io/transactions/228692cb092588230465d052301adeb951647790a61507744456dd4f99425e30" target="_blank">explorer <i class="bi-box-arrow-up-right" style="color: var(--bs-secondary);"></i></a>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

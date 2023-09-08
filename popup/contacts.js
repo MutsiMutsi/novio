@@ -15,6 +15,7 @@ let contactsAddButton;
 function resetContactsView() {
     contactListContainer.style.display = 'block';
     contactViewContainer.style.display = 'none';
+    ContactsAddButton.style.display = 'block';
     populateContactList();
 }
 
@@ -22,7 +23,7 @@ function initializeContacts() {
     //Contact elements
     contactListContainer = document.getElementById("ContactListContainer");
     contactViewContainer = document.getElementById("ContactViewContainer");
-    contactListGroup  = document.getElementById("ContactListGroup");
+    contactListGroup = document.getElementById("ContactListGroup");
     contactViewButtons = document.getElementById("ContactViewButtons");
     contactViewEditButtons = document.getElementById("ContactViewEditButtons");
     contactEditButton = document.getElementById("ContactEditButton");
@@ -121,6 +122,8 @@ function populateContactList() {
             item.innerHTML = `<i class="bi bi-person-fill"></i> ${name}<br><small style="color:var(--bs-secondary)">${address}</small>`;
             contactListGroup.appendChild(item);
 
+            let cacheName = name;
+            let cacheAddress = address;
             item.addEventListener('click', function eventHandler() {
                 contactListContainer.style.display = 'none';
                 contactViewContainer.style.display = 'block';
@@ -128,8 +131,8 @@ function populateContactList() {
                 contactViewEditButtons.style.display = 'none';
                 contactsAddButton.style.display = 'none';
 
-                contactNameInput.value = name;
-                contactAddressInput.value = address;
+                contactNameInput.value = cacheName;
+                contactAddressInput.value = cacheAddress;
             });
         }
     });

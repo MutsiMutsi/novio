@@ -18,6 +18,29 @@ function loadFromSeed(seed) {
     }
 }
 
+function createWallet(password, seed) {
+    try {
+        let newWallet = new nkn.Wallet({
+            seed: seed,
+            password: password,
+        });
+        return newWallet.toJSON();
+    } catch (error) {
+        return { status: error.message, seed: null };
+    }
+}
+
+function openWallet(json, password) {
+    try {
+        wallet = nkn.Wallet.fromJSON(json, { password: password, tls: true });
+        this.memorypool = new MemoryPool(nkn, wallet.options.rpcServerAddr);
+        myAddr = wallet.address;
+        return { status: "SUCCESS", seed: wallet.account.key.seed, publicKey: wallet.account.key.publicKey };
+    } catch (error) {
+        return { status: error.message, seed: null };
+    }
+}
+
 window.addEventListener('message', async function (event) {
     if (event.data.cmd == "getAddress") {
         event.source.postMessage({ cmd: event.data.cmd, reply: myAddr }, "*");
@@ -56,13 +79,16 @@ window.addEventListener('message', async function (event) {
         });
     } else if (event.data.cmd == "verifyAddress") {
         event.source.postMessage({ cmd: event.data.cmd, reply: verifyAddress(event.data.address) }, "*");
+    } else if (event.data.cmd == "createWallet") {
+        event.source.postMessage({ cmd: event.data.cmd, reply: createWallet(event.data.password, event.data.seed) }, "*");
+    } else if (event.data.cmd == "openWallet") {
+        event.source.postMessage({ cmd: event.data.cmd, reply: openWallet(event.data.json, event.data.password) }, "*");
     }
-
 });
 
 async function handleTransferCommand(event) {
     try {
-        if (event.data.amount == '' || +event.data.amount == 0) {
+        if (event.data.amount === '' || +event.data.amount < 0) {
             event.source.postMessage({ cmd: event.data.cmd, reply: "Invalid transfer amount" }, "*");
             return;
         }
@@ -82,7 +108,7 @@ async function handleTransferCommand(event) {
         }
 
         transfer(recipientAddress, event.data.amount, event.data.fee).then((txnHash) => {
-            event.source.postMessage({ cmd: event.data.cmd, reply: "SUCCESS", hash: txnHash, amount: event.data.amount }, "*");
+            event.source.postMessage({ cmd: event.data.cmd, reply: txnHash }, "*");
         }).catch((error) => {
             let shortErr = error.message.split(':').pop().trim();
             shortErr = shortErr.replace("not sufficient", "insufficient");

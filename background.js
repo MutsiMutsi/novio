@@ -105,7 +105,7 @@ function openRequest(request, sendResponse) {
                     data: request.data
                 }, (result) => {
                     if (chrome.runtime.lastError) {
-                        console.log(chrome.runtime.lastError);
+                        console.error(chrome.runtime.lastError);
                         sendResponse({
                             error: 'cancelled'
                         });
@@ -121,7 +121,7 @@ function openRequest(request, sendResponse) {
                     data: request.data
                 }, (result) => {
                     if (chrome.runtime.lastError) {
-                        console.log(chrome.runtime.lastError);
+                        console.error(chrome.runtime.lastError);
                         sendResponse({
                             error: 'cancelled'
                         });

@@ -1,3 +1,4 @@
+let sendRecipientContainer;
 let recipientListGroup;
 let amountListGroup;
 let feeListGroup;
@@ -5,17 +6,22 @@ let recipientInput;
 let amountInput;
 let sendAmountContainer;
 let feeContainer;
+let sendConfirmButton;
+let feeSelect;
+let sendStatusContainer;
 
 function resetSendView() {
     recipientInput.value = '';
     amountInput.value = '';
 
+    sendRecipientContainer.style.display = 'block'
     recipientInput.style.display = 'block';
     amountInput.style.display = 'block';
     feeSelectElements.style.display = 'block';
     sendAmountContainer.style.display = 'none';
     feeContainer.style.display = 'none';
     sendConfirmContainer.style.display = 'none';
+    sendStatusContainer.style.display = 'none';
 
     populateRecipientList('');
     processAmountInput('');
@@ -23,6 +29,7 @@ function resetSendView() {
 }
 
 function initializeSend() {
+    sendRecipientContainer = document.getElementById('SendRecipientContainer');
     recipientListGroup = document.getElementById('RecipientResultListGroup');
     amountListGroup = document.getElementById('AmountResultListGroup');
     feeListGroup = document.getElementById('FeeResultListGroup');
@@ -32,6 +39,9 @@ function initializeSend() {
     feeContainer = document.getElementById('FeeContainer');
     sendConfirmContainer = document.getElementById('SendConfirmContainer');
     feeSelectElements = document.getElementById('FeeSelectElements');
+    sendConfirmButton = document.getElementById('SendConfirmButton');
+    feeSelect = document.getElementById('feeRange');
+    sendStatusContainer = document.getElementById('SendStatusContainer');
 
     recipientInput.addEventListener('input', (e) => {
         populateRecipientList(e.target.value);
@@ -41,14 +51,36 @@ function initializeSend() {
         processAmountInput(e.target.value);
     });
 
-    document.getElementById('feeRange').addEventListener('input', function () {
+    feeSelect.addEventListener('input', function () {
         processFeeSelectInput(this.value);
+    });
+
+    sendConfirmButton.addEventListener('click', async () => {
+        let transferBody = {
+            cmd: 'transfer',
+            address: recipientInput.value,
+            amount: +amountInput.value,
+            fee: (+feeSelect.value) * Math.pow(10, -8)
+        };
+
+        sendStatusContainer.style.display = 'block';
+        sendRecipientContainer.style.display = 'none';
+        sendAmountContainer.style.display = 'none';
+        feeContainer.style.display = 'none';
+        sendConfirmContainer.style.display = 'none';
+
+        var sendResult = await postToSandbox(transferBody);
+        if (validateTransactionHexValue(sendResult)) {
+            addTransactionRow("Transfer", transferBody.amount, sendResult);
+            humane.log("✔ transfer successful");
+        } else {
+            humane.log(`❌ ${sendResult}`);
+        }
+        focusMainContent();
     });
 }
 
 async function populateRecipientList(value) {
-    let contactsResult = processRecipientInput(value);
-
     //Empty it out
     recipientListGroup.replaceChildren();
 
@@ -59,7 +91,7 @@ async function populateRecipientList(value) {
     }
 
     //If a valid NKN address is entered go right away!!
-    if (value.length == '36') {
+    if (value.length == 36) {
         const isValidAddr = await postToSandbox({ cmd: 'verifyAddress', address: value });
         if (isValidAddr) {
             let item = document.createElement('button');
@@ -69,17 +101,22 @@ async function populateRecipientList(value) {
             recipientInput.style.display = 'none';
             sendAmountContainer.style.display = 'block';
             recipientListGroup.appendChild(item);
+            return;
         }
     }
 
+    //Else filter the contact list on name.
+    let contactsResult = await processRecipientInput(value);
     contactsResult.forEach(element => {
         let item = document.createElement('button');
         item.classList.add('list-group-item', 'list-group-item-action');
 
-        item.innerHTML = `<i class="bi bi-person-fill"></i> ${element}<br><small style="color:var(--bs-secondary)">NKNTrHTh1CjVNix73ydAkiNS93RRD8PvxpT4</small>\r\n`;
+        item.innerHTML = `<i class="bi bi-person-fill"></i> ${element[0]}<br><small style="color:var(--bs-secondary)">${element[1]}</small>\r\n`;
         recipientListGroup.appendChild(item);
 
+        let cacheAddress = element[1];
         item.addEventListener('click', function eventHandler() {
+            recipientInput.value = cacheAddress;
             recipientInput.style.display = 'none';
             sendAmountContainer.style.display = 'block';
             this.removeEventListener('click', eventHandler);
@@ -88,6 +125,7 @@ async function populateRecipientList(value) {
         });
     });
 
+    //If nothing found, fallback to this.
     if (recipientListGroup.children.length == 0) {
         let item = document.createElement('button');
         item.classList.add('list-group-item', 'list-group-item-action');
@@ -120,10 +158,15 @@ function processAmountInput(value) {
     amountListGroup.replaceChildren(item);
 }
 
-function processRecipientInput(input) {
-    const knownNames = ['Mutsi', 'Mitchel', 'Michelle', 'Bruce', 'Yilun', 'Yanbo', 'Tom'];
-    const matchingNames = knownNames.filter(name => name.toLowerCase().startsWith(input.toLowerCase()));
-    return matchingNames;
+async function processRecipientInput(input) {
+    const contacts = await chrome.storage.local.get(["contacts"]);
+    if (contacts.contacts) {
+        const filteredContacts =
+            Object.entries(contacts.contacts).filter(([key, value]) => key.toLowerCase().startsWith(input.toLowerCase()));
+        return filteredContacts;
+    } else {
+        return [];
+    }
 }
 
 function processFeeSelectInput(value) {
