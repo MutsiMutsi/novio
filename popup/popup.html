@@ -10,12 +10,11 @@
 
 <body style="width: 100%;">
     <iframe id="sandboxFrame" src="../sandbox.html" style="display: none;"></iframe>
-    <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/bootstrap-icons.css">
     <link rel="stylesheet" href="../styles/bootstrap.min.css">
     <link rel="stylesheet" href="../styles/popup.css">
     <link rel="stylesheet" href="../styles/flatty.css">
 
-    <script src="../library/jquery.min.js"></script>
     <script src="../library/bootstrap.bundle.min.js"></script>
     <script src="../library/qrcode.min.js"></script>
     <script src="../library/humane.js"></script>
@@ -59,10 +58,10 @@
         <div class="container">
             <div class="balanceBox mb-3 py-3" style="text-align: center;">
                 <div class="balanceBoxValueNkn lighterText">
-                    <span style="font-size: 38px;">Loading...</span>
+                    <span style="font-size: 38px;" id="BalanceNKNSpan">Loading...</span>
                 </div>
                 <div class="balanceBoxValueUsd">
-                    <span style="font-size: 24px;">Loading...</span>
+                    <span style="font-size: 24px;" id="BalanceUSDSpan">Loading...</span>
                 </div>
             </div>
 

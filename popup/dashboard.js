@@ -1,8 +1,10 @@
 let displayBalance = 0;
+let balanceNKNSpan;
+let balanceUSDSpan;
 
 async function setBalanceBoxDisplayValue(amount) {
-    $('.balanceBoxValueNkn').children()[0].innerHTML = `${nknToHuman(amount)} NKN`;
-    $('.balanceBoxValueUsd').children()[0].innerHTML = `${nknToUsd(amount)} USD`;
+    balanceNKNSpan.innerHTML = `${nknToHuman(amount)} NKN`;
+    balanceUSDSpan.innerHTML = `${nknToUsd(amount)} USD`;
 }
 
 function StartDashboard() {
@@ -20,6 +22,9 @@ function StartDashboard() {
     const contactsContent = document.getElementById('app-contacts-content');
     const historyContent = document.getElementById('app-history-content');
     const accountContent = document.getElementById('app-account-content');
+
+    balanceNKNSpan = document.getElementById("BalanceNKNSpan");
+    balanceUSDSpan = document.getElementById("BalanceUSDSpan");
 
     document.getElementById('SplashContent').style.display = 'none';
     document.getElementById('DashboardContent').style.display = 'block';
