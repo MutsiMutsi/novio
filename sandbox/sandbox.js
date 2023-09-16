@@ -35,7 +35,7 @@ function openWallet(json, password) {
         wallet = nkn.Wallet.fromJSON(json, { password: password, tls: true });
         this.memorypool = new MemoryPool(nkn, wallet.options.rpcServerAddr);
         myAddr = wallet.address;
-        return { status: "SUCCESS", seed: wallet.account.key.seed, publicKey: wallet.account.key.publicKey };
+        return { status: "SUCCESS", publicKey: wallet.account.key.publicKey };
     } catch (error) {
         return { status: error.message, seed: null };
     }
@@ -83,6 +83,10 @@ window.addEventListener('message', async function (event) {
         event.source.postMessage({ cmd: event.data.cmd, reply: createWallet(event.data.password, event.data.seed) }, "*");
     } else if (event.data.cmd == "openWallet") {
         event.source.postMessage({ cmd: event.data.cmd, reply: openWallet(event.data.json, event.data.password) }, "*");
+    } else if (event.data.cmd == "getRegistrant") {
+        event.source.postMessage({ cmd: event.data.cmd, reply: await getRegistrant(event.data.name) }, "*");
+    } else if (event.data.cmd == "exportSeed") {
+        event.source.postMessage({ cmd: event.data.cmd, reply: wallet.account.key.seed }, "*");
     }
 });
 
@@ -93,21 +97,7 @@ async function handleTransferCommand(event) {
             return;
         }
 
-        var recipientAddress = event.data.address;
-
-        //If the address is not a valid nkn address, attempt to resolve a name registration
-        var isValidNknAddress = nkn.Wallet.verifyAddress(recipientAddress);
-        if (!isValidNknAddress) {
-            var registrantResult = await wallet.getRegistrant(recipientAddress);
-            if (registrantResult.expiresAt > 0) {
-                recipientAddress = nkn.Wallet.publicKeyToAddress(registrantResult.registrant);
-            } else {
-                event.source.postMessage({ cmd: event.data.cmd, reply: `Name ${recipientAddress} is not registered` }, "*");
-                return;
-            }
-        }
-
-        transfer(recipientAddress, event.data.amount, event.data.fee).then((txnHash) => {
+        transfer(event.data.address, event.data.amount, event.data.fee).then((txnHash) => {
             event.source.postMessage({ cmd: event.data.cmd, reply: txnHash }, "*");
         }).catch((error) => {
             let shortErr = error.message.split(':').pop().trim();
@@ -149,25 +139,28 @@ async function sendTransaction(transaction, fee) {
     switch (transaction.type) {
         case 'transferTo':
             return await wallet.transferTo(transaction.data[0], transaction.data[1], options);
-            break;
         case 'registerName':
             return await wallet.registerName(transaction.data[0], options);
-            break;
         case 'transferName':
             return await wallet.transferName(transaction.data[0], transaction.data[1], options);
-            break;
         case 'deleteName':
             return await wallet.deleteName(transaction.data[0], options);
-            break;
         case 'subscribe':
             return await wallet.subscribe(transaction.data[0], transaction.data[1], transaction.data[2], transaction.data[3], options);
-            break;
         case 'unsubscribe':
             return await wallet.unsubscribe(transaction.data[0], transaction.data[1], options);
-            break;
     }
 }
 
 function verifyAddress(address) {
     return nkn.Wallet.verifyAddress(address);
+}
+
+async function getRegistrant(name) {
+    const result = await wallet.getRegistrant(name);
+    if (result.expiresAt > 0) {
+        return nkn.Wallet.publicKeyToAddress(result.registrant);
+    } else {
+        return '';
+    }
 }

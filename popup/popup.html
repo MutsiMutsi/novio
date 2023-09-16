@@ -26,6 +26,7 @@
     <script src="./send.js"></script>
     <script src="./receive.js"></script>
     <script src="./history.js"></script>
+    <script src="./account.js"></script>
 
     <div class="app-content" id="SplashContent" style="display: none;">
         <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
@@ -49,8 +50,8 @@
     <div class="app-content main-div" style="display: none;" id="DashboardContent">
         <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
             <h1>novio</h1>
-            <button type="button" class="btn btn-outline-danger" style="position: absolute; right: 1rem; top: 1rem; display: block;" id="WalletDeleteButton">
-                <span class="bi bi-trash"></span>
+            <button type="button" class="btn btn-outline-secondary" style="position: absolute; right: 1rem; top: 1rem; display: block;" id="AccountButton">
+                <span class="bi bi-gear"></span>
             </button>
             <hr>
         </header>
@@ -119,33 +120,20 @@
             </div>
         </div>
 
-        <div class="container" id="SendAmountContainer" style="display: none;">
-            <div class="input-group">
-                <input type="number" class="form-control" placeholder="0.00000000" id="AmountInput">
+        <div class="container" id="FeeContainer" style="display: none;">
+            <div class="row" style="white-space: nowrap;">
+                <div id="minimumFee" class="col-3" style="text-align: left;">slow (0)</div>
+                <div id="averageFee" class="col-6" style="text-align: center;">average (6)</div>
+                <div id="maximumFee" class="col-3" style="text-align: right;">fast (12)</div>
+            </div>
+            <input id="feeRange" type="range" class="form-range" value="6" min="0" max="12" step="0.00000001">
+            <div class="input-group py-3">
+                <input type="number" class="form-control" placeholder="Amount" id="AmountInput">
                 <div class="input-group-append" id="AmountInputAppendix">
                     <span class="input-group-text" id="sendAmount">NKN</span>
                 </div>
             </div>
-            <div class="list-group" style="max-height: 250px; margin-bottom: 0px; overflow-y:scroll;" id="AmountResultListGroup">
-
-            </div>
-        </div>
-
-        <div class="container" id="FeeContainer" style="display: none;">
-            <div id="FeeSelectElements" style="margin-bottom: -8px;">
-                <div class="row" style="white-space: nowrap;">
-                    <div id="minimumFee" class="col-3" style="text-align: left;">slow (0)</div>
-                    <div id="averageFee" class="col-6" style="text-align: center;">average (6)</div>
-                    <div id="maximumFee" class="col-3" style="text-align: right;">fast (12)</div>
-                </div>
-                <input id="feeRange" type="range" class="form-range" value="6" min="0" max="12" step="1">
-            </div>
-            <div class="list-group" style="max-height: 250px; margin-bottom: 0px; overflow-y:scroll;" id="FeeResultListGroup">
-            </div>
-        </div>
-
-        <div class="container" id="SendConfirmContainer" style="display: none;">
-            <button class="btn btn-primary" style="width: 100%;" id="SendConfirmButton">Confirm</button>
+            <button class="btn btn-outline-primary" style="width: 100%;" type="button" id="SendConfirmButton">Send</button>
         </div>
 
         <div class="container" id="SendStatusContainer" style="display: none;">
@@ -245,6 +233,78 @@
         <div class="container">
             <div class="list-group" style="max-height: 250px; margin-bottom: 0px; overflow-y:scroll;" id="HistoryListGroup">
             </div>
+        </div>
+    </div>
+
+    <!--ACCOUNT COMPONENT-->
+    <div id="app-account-content" class="overlap-div">
+        <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
+            <button type="button" class="btn btn-outline-secondary" style="position: absolute; left: 1rem; top: 1rem;" id="AccountBackButton">
+                <span class="bi bi-arrow-left"></span>
+            </button>
+            <h1>account</h1>
+            <hr>
+        </header>
+
+        <div class="container">
+            <div id="AccountInfoBox">
+                <!--<label><i class="bi bi-tag"></i> Name</label>
+            <div class="input-group">
+                <input type="text" readonly="" class="form-control text-center" value="My Main Wallet" id="XXX">
+                <div class="input-group-append">
+                    <span class="input-group-text copyValue" id="XXX">
+                        <i class="bi bi-clipboard"></i>
+                    </span>
+                </div>
+            </div>-->
+
+                <label><i class="bi bi-wallet"></i> Address</label>
+                <div class="input-group">
+                    <input type="text" readonly="" class="form-control text-center" value="NKNTrHTh1CjVNix73ydAkiNS93RRD8PvxpT4" id="AccountAddressInput">
+                    <div class="input-group-append">
+                        <span class="input-group-text copyValue" id="AccountAddressInputCopy">
+                            <i class="bi bi-clipboard"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <label><i class="bi bi-key"></i> Public Key</label>
+                <div class="input-group">
+                    <input type="text" readonly="" class="form-control text-center" value="" id="PublicKeyInput">
+                    <div class="input-group-append">
+                        <span class="input-group-text copyValue" id="PublicKeyInputCopy">
+                            <i class="bi bi-clipboard"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <label><i class="bi bi-key-fill"></i> Seed</label>
+                <button class="btn btn-outline-secondary" style="width: 100%;" id="ExportSeedButton">Export Seed</button>
+                <div class="input-group" style="display: none;" id="SeedDisplayGroup">
+                    <input type="text" readonly="" class="form-control text-center" value="" id="SeedExport">
+                    <div class="input-group-append">
+                        <span class="input-group-text copyValue" id="SeedExportCopy">
+                            <i class="bi bi-clipboard"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="input-group mb-3 py-3">
+                    <button class="btn btn-outline-warning" style="width: 100%;" id="WalletDeleteButton">Delete Account</button>
+                </div>
+            </div>
+
+            <div id="DeleteWalletConfirmBox" style="display: none;">
+                <h4>Are you sure?</h4>
+                <p>Make sure you have a backup of your seed!
+
+                </p>
+                <div class="input-group mb-3">
+                    <button class="btn btn-outline-warning" type="button" id="DeleteConfirmButton">Delete</button>
+                    <button class="btn btn-outline-primary" type="button" id="DeleteCancelButton">Cancel</button>
+                </div>
+            </div>
+
         </div>
     </div>
 </body>

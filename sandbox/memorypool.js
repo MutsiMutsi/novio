@@ -12,7 +12,7 @@ class MemoryPool {
         }, 0);
 
         if (sumOfTxCount < 10) {
-            return { min: 0, avg: 0, max: 0.00000001 };
+            return { min: 0, avg: 0, max: 0.01 };
         } else {
             var txList = await this.processMempool();
 
@@ -24,7 +24,7 @@ class MemoryPool {
             const maxFee = Math.max(...fees);
             const avgFee = fees.reduce((acc, curr) => acc + curr, 0) / fees.length;
 
-            return { min: 0, avg: avgFee, max: maxFee + 0.00000001 };
+            return { min: 0, avg: avgFee, max: maxFee + 0.01 };
         }
     }
 

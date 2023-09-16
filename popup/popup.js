@@ -1,5 +1,6 @@
 var price = 0;
 var walletBalance = 0;
+var publicKey = '';
 
 let iframe = document.getElementById('sandboxFrame');
 let mainContent;
@@ -93,16 +94,21 @@ window.onload = async function () {
     });
     postToSandbox({ cmd: 'getFee' }).then((fee) => {
 
-        let minNits = +fee.min * Math.pow(10, 8);
-        let maxNits = +fee.max * Math.pow(10, 8);
-        let avgNits = Math.floor((minNits + maxNits) / 2);
+        let minFee = +fee.min;
+        let maxFee = +fee.max;
+        let avgFee = (minFee + maxFee / 2);
 
-        document.getElementById('minimumFee').innerText = `slow (${minNits})`;
-        document.getElementById('averageFee').innerText = `average (${avgNits})`;
-        document.getElementById('maximumFee').innerText = `fast (${maxNits})`;
+        let maxPrecision = Math.max(Math.max(precision(minFee), precision(avgFee)), avgFee);
 
-        feeSelect.min = minNits;
-        feeSelect.max = maxNits;
+        document.getElementById('minimumFee').innerText = `slow (${minFee})`;
+        document.getElementById('averageFee').innerText = `average (${avgFee})`;
+        document.getElementById('maximumFee').innerText = `fast (${maxFee})`;
+
+        feeSelect.min = minFee;
+        feeSelect.max = maxFee;
+
+        let stepSize = 1.0 / Math.pow(10, maxPrecision);
+        feeSelect.step = stepSize;
     });
 };
 
@@ -123,6 +129,13 @@ function focusMainContent() {
     setTimeout(() => {
         currentSubContent.style.visibility = 'hidden';
     }, 333);
+}
+
+function precision(a) {
+    if (!isFinite(a)) return 0;
+    var e = 1, p = 0;
+    while (Math.round(a * e) / e !== a) { e *= 10; p++; }
+    return p;
 }
 
 async function postToSandbox(message) {
@@ -176,6 +189,7 @@ async function openAccount(name) {
     var walletJSON = accounts[name];
 
     let result = await postToSandbox({ cmd: 'openWallet', json: walletJSON, password: '' });
+    publicKey = result.publicKey;
     return result.status == 'SUCCESS';
 }
 
@@ -199,3 +213,26 @@ async function createNewAccount(name, seed, password) {
     );
 }
 
+function throttle(callback, delay = 1000) {
+    let shouldWait = false;
+
+    return (...args) => {
+        if (shouldWait) return;
+
+        callback(...args);
+        shouldWait = true;
+        setTimeout(() => {
+            shouldWait = false;
+        }, delay);
+    };
+}
+
+function debounce(callback, delay = 1000) {
+    var time;
+    return (...args) => {
+        clearTimeout(time);
+        time = setTimeout(() => {
+            callback(...args);
+        }, delay);
+    };
+}
