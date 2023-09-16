@@ -1,6 +1,6 @@
 let qrcode;
 
-function initializeReceive(address) {
+function initializeReceive() {
     document.getElementById('ReceiveAddressInput').value = address;
     document.getElementById('CopyAddressButton').addEventListener('click', (e) => {
         e.currentTarget.innerHTML = `<i class="bi bi-clipboard-check"></i>`;

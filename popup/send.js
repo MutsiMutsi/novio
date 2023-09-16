@@ -53,8 +53,6 @@ function initializeSend() {
             fee: +feeSelect.value
         };
 
-        debugger;
-
         sendStatusContainer.style.display = 'block';
         sendRecipientContainer.style.display = 'none';
         feeContainer.style.display = 'none';

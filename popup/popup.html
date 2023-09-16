@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="width: 420px; height: 340px;">
 
 <head>
     <meta charset="UTF-8">
@@ -8,7 +8,7 @@
     <title>novio</title>
 </head>
 
-<body style="width: 420px; height: 324px;">
+<body style="width: 100%;">
     <iframe id="sandboxFrame" src="../sandbox.html" style="display: none;"></iframe>
     <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/font/bootstrap-icons.css">
     <link rel="stylesheet" href="../styles/bootstrap.min.css">
@@ -192,12 +192,12 @@
 
         <div class="container" id="ContactViewContainer" style="display: none;">
             <div class="form-group">
-                <label>Name</label>
+                <label for="ContactNameInput">Name</label>
                 <input type="text" class="form-control" placeholder="enter a name" id="ContactNameInput" readonly>
             </div>
 
             <div class="form-group">
-                <label>Address</label>
+                <label for="ContactAddressInput">Address</label>
                 <input type="text" class="form-control" placeholder="enter nkn address" id="ContactAddressInput" readonly>
             </div>
 
@@ -248,19 +248,19 @@
 
         <div class="container">
             <div id="AccountInfoBox">
-                <!--<label><i class="bi bi-tag"></i> Name</label>
-            <div class="input-group">
-                <input type="text" readonly="" class="form-control text-center" value="My Main Wallet" id="XXX">
-                <div class="input-group-append">
-                    <span class="input-group-text copyValue" id="XXX">
-                        <i class="bi bi-clipboard"></i>
-                    </span>
-                </div>
-            </div>-->
-
-                <label><i class="bi bi-wallet"></i> Address</label>
+                <!--<label for="XXX"><i class="bi bi-tag"></i> Name</label>
                 <div class="input-group">
-                    <input type="text" readonly="" class="form-control text-center" value="NKNTrHTh1CjVNix73ydAkiNS93RRD8PvxpT4" id="AccountAddressInput">
+                    <input type="text" readonly="" class="form-control text-center" value="My Main Wallet" id="XXX">
+                    <div class="input-group-append">
+                        <span class="input-group-text copyValue" id="XXX">
+                            <i class="bi bi-clipboard"></i>
+                        </span>
+                    </div>
+                </div>-->
+
+                <label for="AccountAddressInput"><i class="bi bi-wallet"></i> Address</label>
+                <div class="input-group">
+                    <input type="text" readonly="" class="form-control text-center" value="" id="AccountAddressInput">
                     <div class="input-group-append">
                         <span class="input-group-text copyValue" id="AccountAddressInputCopy">
                             <i class="bi bi-clipboard"></i>
@@ -268,7 +268,7 @@
                     </div>
                 </div>
 
-                <label><i class="bi bi-key"></i> Public Key</label>
+                <label for="PublicKeyInput"><i class="bi bi-key"></i> Public Key</label>
                 <div class="input-group">
                     <input type="text" readonly="" class="form-control text-center" value="" id="PublicKeyInput">
                     <div class="input-group-append">
@@ -278,7 +278,7 @@
                     </div>
                 </div>
 
-                <label><i class="bi bi-key-fill"></i> Seed</label>
+                <label for="ExportSeedButton"><i class="bi bi-key-fill"></i> Seed</label>
                 <button class="btn btn-outline-secondary" style="width: 100%;" id="ExportSeedButton">Export Seed</button>
                 <div class="input-group" style="display: none;" id="SeedDisplayGroup">
                     <input type="text" readonly="" class="form-control text-center" value="" id="SeedExport">

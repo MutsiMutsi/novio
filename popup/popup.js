@@ -1,6 +1,7 @@
 var price = 0;
 var walletBalance = 0;
 var publicKey = '';
+var address = '';
 
 let iframe = document.getElementById('sandboxFrame');
 let mainContent;
@@ -83,7 +84,9 @@ window.onload = async function () {
     StartDashboard();
 
     postToSandbox({ cmd: 'getAddress' }).then((addr) => {
-        initializeReceive(addr);
+        address = addr;
+        initializeReceive();
+        initializeAccount();
     });
     postToSandbox({ cmd: 'getBalance' }).then((balance) => {
         walletBalance = balance;

@@ -15,7 +15,7 @@ function initializeAccount() {
     document.getElementById("ExportSeedButton").addEventListener('click', async () => {
         document.getElementById("ExportSeedButton").style.display = 'none';
         document.getElementById("SeedDisplayGroup").style.display = 'flex';
-        document.getElementById("SeedExport").value = await postToSandbox({cmd: 'exportSeed'});;
+        document.getElementById("SeedExport").value = await postToSandbox({ cmd: 'exportSeed' });;
     });
 
 
@@ -40,6 +40,7 @@ function resetAccount() {
     document.getElementById("ExportSeedButton").style.display = 'block';
     document.getElementById("SeedDisplayGroup").style.display = 'none';
 
+    document.getElementById("AccountAddressInput").value = address;
     document.getElementById("PublicKeyInput").value = publicKey;
     document.getElementById("SeedExport").value = '';
 }
