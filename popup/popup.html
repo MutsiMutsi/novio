@@ -19,6 +19,7 @@
     <script src="../library/qrcode.min.js"></script>
     <script src="../library/humane.js"></script>
 
+    <script src="../shared/util.js"></script>
     <script src="./popup.js"></script>
     <script src="./dashboard.js"></script>
     <script src="./contacts.js"></script>
@@ -41,7 +42,7 @@
             </div>
             <br>
             <div class="input-group">
-                <button class="btn btn-primary" type="button" id="GenerateSeedButton">Generate Wallet</button>
+                <button class="btn btn-outline-primary" type="button" id="GenerateSeedButton">Generate Wallet</button>
             </div>
         </div>
     </div>
@@ -201,14 +202,14 @@
             </div>
 
             <div class="py-3" id="ContactViewButtons">
-                <button class="btn btn-primary" style="width: 100%;" id="ContactEditButton"><i class="bi bi-pencil"></i> Edit</button>
+                <button class="btn btn-outline-primary" style="width: 100%;" id="ContactEditButton"><i class="bi bi-pencil"></i> Edit</button>
             </div>
             <div class="row py-3" id="ContactViewEditButtons">
                 <div class="col">
-                    <button disabled class="btn btn-success" style="width: 100%;" id="ContactSaveButton"><i class="bi bi-save"></i> Save</button>
+                    <button disabled class="btn btn-outline-success" style="width: 100%;" id="ContactSaveButton"><i class="bi bi-save"></i> Save</button>
                 </div>
                 <div class="col">
-                    <button class="btn btn-warning" style="width: 100%;" id="ContactDeleteButton"><i class="bi bi-trash"></i> Delete</button>
+                    <button class="btn btn-outline-warning" style="width: 100%;" id="ContactDeleteButton"><i class="bi bi-trash"></i> Delete</button>
                 </div>
             </div>
         </div>

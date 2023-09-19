@@ -1,28 +1,15 @@
 var iframe = document.getElementById('sandboxFrame');
 
-//Listen to sandbox replies
-window.addEventListener('message', function (event) {
-    if (event.data.cmd == 'loadFromSeed') {
-        this.document.getElementById("signConfirm").disabled = false;
-    }
-});
-
 //Listen to foreground/background messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.message == 'signRequestData') {
         this.document.getElementById("signData").innerHTML = generateSignDataHtml(request.data);
-        this.document.getElementById("signConfirm").onclick = () => {
-
-            iframe.contentWindow.postMessage({
+        this.document.getElementById("signConfirm").onclick = async () => {
+            const signResult = await postToSandbox({
                 cmd: 'signMessage',
                 data: request.data
-            }, "*");
-
-            window.addEventListener('message', (event) => {
-                if (event.data.cmd == 'signMessage') {
-                    sendResponse(event.data.reply);
-                }
-            }, false);
+            });
+            sendResponse(signResult);
         };
     }
     return true;
@@ -34,23 +21,18 @@ iframe.onload = function () {
     Startup();
 };
 
-function Startup() {
-    chrome.storage.local.get(["seed"]).then((result) => {
-        if (result.seed) {
-            //Load from seed 
-            iframe.contentWindow.postMessage({
-                cmd: 'loadFromSeed',
-                seed: result.seed
-            }, "*");
-        }
-    });
+async function Startup() {
+    await openAccount('main');
+
     chrome.runtime.sendMessage({
         message: "requestPageLoaded",
     });
+
+    this.document.getElementById("signConfirm").disabled = false;
 }
 
 function generateValueBoxHtml(value) {
-    return `<p class="card-text valueBox">${value}</p>`;
+    return `<input type="text" class="form-control" value="${value}" readonly>`;
 }
 
 function generateValueTitleHtml(title) {

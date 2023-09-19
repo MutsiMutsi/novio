@@ -1,77 +1,39 @@
 var iframe = document.getElementById('sandboxFrame');
 var fees;
 
-//Listen to sandbox replies
-window.addEventListener('message', function (event) {
-    if (event.data.cmd == 'loadFromSeed') {
-        if (event.data.reply == "SUCCESS") {
-            iframe.contentWindow.postMessage({
-                cmd: 'getFee'
-            }, "*");
-        }
-    } else if (event.data.cmd == 'getFee') {
-        fees = event.data.reply;
-        this.document.getElementById("minFee").innerHTML = `Slow (${event.data.reply.min.toFixed(2)})`;
-        this.document.getElementById("avgFee").innerHTML = `Average (${event.data.reply.avg.toFixed(2)})`;
-        this.document.getElementById("maxFee").innerHTML = `Fast (${event.data.reply.max.toFixed(2)})`;
-        this.document.getElementById("transactionConfirm").disabled = false;
-    }
-});
-
 //Listen to foreground/background messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.message == 'transactionRequestData') {
         this.document.getElementById("transactionData").innerHTML = generateTransactionDataHtml(request.data);
-        this.document.getElementById("transactionConfirm").onclick = () => {
+        this.document.getElementById("transactionConfirm").onclick = async () => {
 
             this.document.getElementById("transactionDisplay").style.display = 'none';
             this.document.getElementById("waitingDisplay").style.display = 'block';
             this.document.getElementById("progressDisplay").style.display = 'block';
             this.document.getElementById("waitingIcon").style.display = 'block';
 
-            var selectedFeeIndex = +document.getElementById("feeRange").value;
-            var selectedFeeValue = 0;
-            switch (selectedFeeIndex) {
-                case 0:
-                    selectedFeeValue = fees.min;
-                    break;
-                case 1:
-                    selectedFeeValue = fees.avg;
-                    break;
-                case 2:
-                    selectedFeeValue = fees.max;
-                    break;
-            };
-
-            iframe.contentWindow.postMessage({
+            const sendTxReply = await postToSandbox({
                 cmd: 'sendTransaction',
                 transaction: request.data,
-                fee: selectedFeeValue
-            }, "*");
+                fee: +document.getElementById("feeRange").value
+            })
 
-            window.addEventListener('message', (event) => {
-                if (event.data.cmd == 'sendTransaction') {
+            sendResponse(sendTxReply);
 
+            if (sendTxReply.error) {
+                this.document.getElementById("progressDisplay").style.display = 'none';
+                this.document.getElementById("waitingIcon").style.display = 'none';
+                this.document.getElementById("failedIcon").style.display = 'block';
+            }
+            else {
+                let dataValueIndex = typeDataDisplayIndex[request.data.type];
+                let displayValue = request.data.data[dataValueIndex];
+                addTransactionHistory(typeDisplay[request.data.type], displayValue, sendTxReply);
 
-
-                    sendResponse(event.data.reply);
-
-                    if (event.data.reply.error) {
-                        this.document.getElementById("progressDisplay").style.display = 'none';
-                        this.document.getElementById("waitingIcon").style.display = 'none';
-                        this.document.getElementById("failedIcon").style.display = 'block';
-                    }
-                    else {
-                        let dataValueIndex = typeDataDisplayIndex[request.data.type];
-                        let displayValue = request.data.data[dataValueIndex];
-                        addTransactionHistory(typeDisplay[request.data.type], displayValue, event.data.reply);
-
-                        this.document.getElementById("progressDisplay").style.display = 'none';
-                        this.document.getElementById("waitingIcon").style.display = 'none';
-                        this.document.getElementById("successIcon").style.display = 'block';
-                    }
-                }
-            }, false);
+                this.document.getElementById("progressDisplay").style.display = 'none';
+                this.document.getElementById("waitingIcon").style.display = 'none';
+                this.document.getElementById("successIcon").style.display = 'block';
+            }
         };
     }
     return true;
@@ -83,16 +45,38 @@ iframe.onload = function () {
     Startup();
 };
 
-function Startup() {
-    chrome.storage.local.get(["seed"]).then((result) => {
-        if (result.seed) {
-            //Load from seed 
-            iframe.contentWindow.postMessage({
-                cmd: 'loadFromSeed',
-                seed: result.seed
-            }, "*");
-        }
+async function Startup() {
+
+    await openAccount('main');
+    postToSandbox({ cmd: 'getFee' }).then((fee) => {
+        this.document.getElementById("transactionConfirm").disabled = false
+
+        let minFee = +fee.min;
+        let maxFee = +fee.max;
+        let avgFee = (minFee + maxFee / 2);
+
+        let maxPrecision = Math.max(Math.max(precision(minFee), precision(avgFee)), avgFee);
+
+        document.getElementById('minFee').innerText = `slow (${minFee})`;
+        document.getElementById('avgFee').innerText = `average (${avgFee})`;
+        document.getElementById('maxFee').innerText = `fast (${maxFee})`;
+
+        let feeSelect = document.getElementById("feeRange");
+
+        feeSelect.min = minFee;
+        feeSelect.max = maxFee;
+
+        let stepSize = 1.0 / Math.pow(10, maxPrecision);
+        feeSelect.step = stepSize;
+
+        feeSelect.addEventListener('input', function () {
+            document.getElementById('avgFee').innerText = `fee (${this.value})`;
+        });
+
+        feeSelect.value = 0.001;
+        document.getElementById('avgFee').innerText = `fee (${feeSelect.value})`;
     });
+
     chrome.runtime.sendMessage({
         message: "requestPageLoaded",
     });
@@ -118,7 +102,7 @@ const typeDataDisplayIndex = {
 }
 
 function generateValueBoxHtml(value) {
-    return `<p class="card-text valueBox">${value}</p>`;
+    return `<input type="text" class="form-control" value="${value}" readonly>`;
 }
 
 function generateValueTitleHtml(title) {
@@ -182,7 +166,7 @@ function addTransactionHistory(type, value, hash) {
         if (!transactionHistory) {
             transactionHistory = [];
         }
-        transactionHistory.unshift({
+        transactionHistory.push({
             date: +new Date(),
             type: type,
             value: value,

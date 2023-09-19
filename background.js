@@ -73,15 +73,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 function openRequest(request, sendResponse) {
     chrome.windows.get(windowId, async (tabWindow) => {
-        const width = 417;
-        const height = 560;
-        const left = Math.round((tabWindow.width - width) * 0.5 + tabWindow.left)
-        const top = Math.round((tabWindow.height - height) * 0.5 + tabWindow.top)
+        let width = 417;
+        let height = 564;
 
         let url = 'request/request.html';
         if (request.message === 'onNovioSignRequest') {
             url = 'request/sign.html';
+            height = 320;
         }
+
+        const left = Math.round((tabWindow.width - width) * 0.5 + tabWindow.left)
+        const top = Math.round((tabWindow.height - height) * 0.5 + tabWindow.top)
+
         waitingForRequestPage = true;
         requestPopupWindow = await chrome.windows.create({
             width: width,
@@ -105,7 +108,6 @@ function openRequest(request, sendResponse) {
                     data: request.data
                 }, (result) => {
                     if (chrome.runtime.lastError) {
-                        console.error(chrome.runtime.lastError);
                         sendResponse({
                             error: 'cancelled'
                         });
@@ -121,7 +123,6 @@ function openRequest(request, sendResponse) {
                     data: request.data
                 }, (result) => {
                     if (chrome.runtime.lastError) {
-                        console.error(chrome.runtime.lastError);
                         sendResponse({
                             error: 'cancelled'
                         });

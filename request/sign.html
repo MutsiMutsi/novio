@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="height: 99%;">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -8,38 +8,32 @@
     <title>novio sign</title>
 </head>
 
-<body style="height: 100%;">
+<body>
     <iframe id="sandboxFrame" src="../sandbox.html" style="display: none;"></iframe>
 
-    <link rel="stylesheet" href="../styles/wallet.css">
-    <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../styles/bootstrap-icons-1.10.4/bootstrap-icons.css">
     <link rel="stylesheet" href="../styles/bootstrap.min.css">
     <link rel="stylesheet" href="../styles/flatty.css">
+    <link rel="stylesheet" href="../styles/popup.css">
 
-    <div id="signDisplay" class="card" style="max-width: 25rem; height: 100%; display: block;">
-        <div class="card-header" style="text-align: center;">
-            <h1>novio sign
-            </h1>
-        </div>
-        <div class="card-body" style="width: 25rem;">
-            <ul class="list-group">
-                <div id="signData">
-                </div>
-            </ul>
+    <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
+        <h1>novio sign</h1>
+        <hr>
+    </header>
 
+    <div class="container">
+        <div id="signData"></div>
+        The website has requested you to sign a message.<br>
+        Note: this will allow the website to learn your public key.
+
+        <div class="py-3">
+            <button class="btn btn-outline-primary" style="width: 100%;" type="button" id="signConfirm" disabled>Confirm</button>
         </div>
-        <div class="card-body" style="width: 25rem;">
-            The website has requested you to sign a message.
-            Note: this will allow the website to learn your public key.
-        </div>
-        <button class="btn btn-outline-primary" style="width:100%; position: absolute; bottom: 0;" disabled="true"
-            type="button" id="signConfirm">Confirm</button>
     </div>
 
-    <script src="../library/jquery.min.js"></script>
+    <script src="../shared/util.js"></script>
     <script src="../library/bootstrap.bundle.min.js"></script>
     <script src="../library/humane.js"></script>
-
     <script src="./sign_script.js"></script>
 </body>
 

@@ -2,22 +2,6 @@ let myAddr = "Loading...";
 let balance = "Loading...";
 let wallet;
 
-function loadFromSeed(seed) {
-    try {
-        wallet = new nkn.Wallet({
-            seed: seed,
-            tls: true,
-        });
-
-        this.memorypool = new MemoryPool(nkn, wallet.options.rpcServerAddr);
-
-        myAddr = wallet.address;
-        return { status: "SUCCESS", seed: wallet.account.key.seed, publicKey: wallet.account.key.publicKey };
-    } catch (error) {
-        return { status: error.message, seed: null };
-    }
-}
-
 function createWallet(password, seed) {
     try {
         let newWallet = new nkn.Wallet({
@@ -43,69 +27,66 @@ function openWallet(json, password) {
 
 window.addEventListener('message', async function (event) {
     if (event.data.cmd == "getAddress") {
-        event.source.postMessage({ cmd: event.data.cmd, reply: myAddr }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: myAddr }, "*");
     }
     else if (event.data.cmd == "getBalance") {
         await wallet.getBalance().then((value) => {
             balance = value.toString();
-            event.source.postMessage({ cmd: event.data.cmd, reply: balance }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: balance }, "*");
         });
     } else if (event.data.cmd == "transfer") {
         handleTransferCommand(event);
-    } else if (event.data.cmd == "loadFromSeed") {
-        var message = loadFromSeed(event.data.seed);
-        event.source.postMessage({ cmd: event.data.cmd, reply: message.status, seed: message.seed, publicKey: message.publicKey }, "*");
     }
     else if (event.data.cmd == "getTransaction") {
         getTransaction(event.data.hash).then((result) => {
-            event.source.postMessage({ cmd: event.data.cmd, reply: result }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: result }, "*");
         }).catch((error) => {
             //nkn sdk library throws exceptions, digest.
             console.log("Transaction not yet confirmed")
         });
     } else if (event.data.cmd == "getFee") {
-        event.source.postMessage({ cmd: event.data.cmd, reply: await memorypool.getFee() }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: await memorypool.getFee() }, "*");
     } else if (event.data.cmd == "sendTransaction") {
         sendTransaction(event.data.transaction, event.data.fee).then(async (result) => {
-            event.source.postMessage({ cmd: event.data.cmd, reply: result }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: result }, "*");
         }).catch((error) => {
-            event.source.postMessage({ cmd: event.data.cmd, reply: { error: error.message } }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: { error: error.message } }, "*");
         });
     } else if (event.data.cmd == "signMessage") {
         signChallenge(event.data.data).then(async (result) => {
-            event.source.postMessage({ cmd: event.data.cmd, reply: { signature: result, publicKey: wallet.account.key.publicKey } }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: { signature: result, publicKey: wallet.account.key.publicKey } }, "*");
         }).catch((error) => {
-            event.source.postMessage({ cmd: event.data.cmd, reply: { error: error.message } }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: { error: error.message } }, "*");
         });
     } else if (event.data.cmd == "verifyAddress") {
-        event.source.postMessage({ cmd: event.data.cmd, reply: verifyAddress(event.data.address) }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: verifyAddress(event.data.address) }, "*");
     } else if (event.data.cmd == "createWallet") {
-        event.source.postMessage({ cmd: event.data.cmd, reply: createWallet(event.data.password, event.data.seed) }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: createWallet(event.data.password, event.data.seed) }, "*");
     } else if (event.data.cmd == "openWallet") {
-        event.source.postMessage({ cmd: event.data.cmd, reply: openWallet(event.data.json, event.data.password) }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: openWallet(event.data.json, event.data.password) }, "*");
     } else if (event.data.cmd == "getRegistrant") {
-        event.source.postMessage({ cmd: event.data.cmd, reply: await getRegistrant(event.data.name) }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: await getRegistrant(event.data.name) }, "*");
     } else if (event.data.cmd == "exportSeed") {
-        event.source.postMessage({ cmd: event.data.cmd, reply: wallet.account.key.seed }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: wallet.account.key.seed }, "*");
     }
 });
 
 async function handleTransferCommand(event) {
     try {
         if (event.data.amount === '' || +event.data.amount < 0) {
-            event.source.postMessage({ cmd: event.data.cmd, reply: "Invalid transfer amount" }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: "Invalid transfer amount" }, "*");
             return;
         }
 
         transfer(event.data.address, event.data.amount, event.data.fee).then((txnHash) => {
-            event.source.postMessage({ cmd: event.data.cmd, reply: txnHash }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: txnHash }, "*");
         }).catch((error) => {
             let shortErr = error.message.split(':').pop().trim();
             shortErr = shortErr.replace("not sufficient", "insufficient");
-            event.source.postMessage({ cmd: event.data.cmd, reply: shortErr }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: shortErr }, "*");
         });
     } catch (error) {
-        event.source.postMessage({ cmd: event.data.cmd, reply: error.message }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: error.message }, "*");
     }
 }
 
