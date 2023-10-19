@@ -47,7 +47,8 @@ iframe.onload = function () {
 
 async function Startup() {
 
-    await openAccount('main');
+    let lastUsedName = await getLastUsedAccountName();
+    await openAccount(lastUsedName, await openSession());
     postToSandbox({ cmd: 'getFee' }).then((fee) => {
         this.document.getElementById("transactionConfirm").disabled = false
 

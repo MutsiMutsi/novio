@@ -19,6 +19,7 @@
     <script src="../library/qrcode.min.js"></script>
     <script src="../library/humane.js"></script>
 
+    <script src="../shared/crypto-aes-gcm.js"></script>
     <script src="../shared/util.js"></script>
     <script src="./popup.js"></script>
     <script src="./dashboard.js"></script>
@@ -36,14 +37,47 @@
 
         <div class="container">
             <p>To get started you can either import an existing wallet by entering your seed, or you can generate a new wallet.</p>
-            <h5>Import Wallet</h5>
-            <div class="input-group">
-                <input type="text" class="form-control" placeholder="enter nkn wallet seed" id="SeedInput" autocomplete="off">
+
+            <label class="form-label" for="NameInput">Enter a name for your wallet</label>
+            <div class="input-group has-danger has-success">
+                <input type="text" class="form-control is-invalid" placeholder="name your wallet" id="NameInput" autocomplete="off">
+                <div class="valid-feedback">&nbsp;</div>
+                <div class="invalid-feedback" id="NameInputInvalid">&nbsp;</div>
             </div>
-            <br>
-            <div class="input-group">
-                <button class="btn btn-outline-primary" type="button" id="GenerateSeedButton">Generate Wallet</button>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label" for="SeedInput">Existing</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="enter nkn wallet seed" id="SeedInput" autocomplete="off" disabled>
+                    </div>
+                </div>
+                <div class="col">
+                    <label class="form-label" for="GenerateSeedButton">New</label>
+                    <div class="input-group">
+                        <button class="btn btn-outline-primary" style="width: 100%;" type="button" id="GenerateSeedButton" disabled>Generate Wallet</button>
+                    </div>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <div class="app-content" id="UnlockContent" style="display: none;">
+        <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
+            <h1>Hi, good to see you again!</h1>
+            <hr>
+        </header>
+
+        <div class="container text-center">
+            <p>Your wallets have been securely encrypted.</p>
+            <img src="/images/icon-128x128.png" style="width: 144px;">
+        </div>
+
+        <div class="container" style="position: absolute; bottom: 1rem;">
+            <label class="form-label" for="PasswordInput">Password</label>
+            <div class="input-group">
+                <input type="password" class="form-control" id="PasswordInput" autocomplete="off" autofocus tabindex="1">
+            </div>
+            <button class="btn btn-outline-primary mt-3 w-100" id="UnlockButton">Unlock</button>
         </div>
     </div>
 
@@ -56,8 +90,10 @@
             <hr>
         </header>
 
-        <div class="container">
+        <div class="container text-center">
             <div class="balanceBox mb-3 py-3" style="text-align: center;">
+                <span class="AccountSwitch NoSelect" data-bs-toggle="modal" data-bs-target="#SelectAccountModal"><span id="AccountName">main</span> <i class="bi bi-chevron-down"></i>
+                </span>
                 <div class="balanceBoxValueNkn lighterText">
                     <span style="font-size: 38px;" id="BalanceNKNSpan">Loading...</span>
                 </div>
@@ -66,7 +102,7 @@
                 </div>
             </div>
 
-            <div class="buttonBox mb-3 py-3" style="text-align: center;">
+            <div class="buttonBox mb-3 py-3 NoSelect" style="text-align: center;">
                 <div class="row">
                     <div class="col buttonColumn" id="SendButton">
                         <button type="button" class="btn btn-primary rounded-circle">
@@ -121,19 +157,36 @@
         </div>
 
         <div class="container" id="FeeContainer" style="display: none;">
-            <div class="row" style="white-space: nowrap;">
+            <div class="row mt-3" style="white-space: nowrap;">
                 <div id="minimumFee" class="col-3" style="text-align: left;">slow (0)</div>
                 <div id="averageFee" class="col-6" style="text-align: center;">average (6)</div>
                 <div id="maximumFee" class="col-3" style="text-align: right;">fast (12)</div>
             </div>
             <input id="feeRange" type="range" class="form-range" value="6" min="0" max="12" step="0.00000001">
-            <div class="input-group py-3">
-                <input type="number" class="form-control" placeholder="Amount" id="AmountInput">
-                <div class="input-group-append" id="AmountInputAppendix">
-                    <span class="input-group-text" id="sendAmount">NKN</span>
+
+            <div class="row">
+                <div class="col-6">
+                    <div class="input-group py-3">
+                        <input type="number" step="any" class="form-control" placeholder="0" id="AmountInput">
+                        <div class="input-group-append">
+                            <span class="input-group-text" id="sendAmount">NKN</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="input-group py-3">
+                        <input type="number" step="any" class="form-control" placeholder="0" id="AmountUsdInput">
+                        <div class="input-group-append">
+                            <span class="input-group-text" id="sendAmountUsd">USD</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <button class="btn btn-outline-primary" style="width: 100%;" type="button" id="SendConfirmButton">Send</button>
+            <div class="row">
+                <div class="col">
+                    <button class="btn btn-outline-primary" style="width: 100%;" type="button" id="SendConfirmButton">Send</button>
+                </div>
+            </div>
         </div>
 
         <div class="container" id="SendStatusContainer" style="display: none;">
@@ -296,17 +349,81 @@
 
             <div id="DeleteWalletConfirmBox" style="display: none;">
                 <h4>Are you sure?</h4>
-                <p>Make sure you have a backup of your seed!
+                <p>Make sure you have a backup of your seed!</p>
 
-                </p>
-                <div class="input-group mb-3">
-                    <button class="btn btn-outline-warning" type="button" id="DeleteConfirmButton">Delete</button>
-                    <button class="btn btn-outline-primary" type="button" id="DeleteCancelButton">Cancel</button>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="WalletDeleteConfirmationCheckbox">
+                    <label class="form-check-label" for="WalletDeleteConfirmationCheckbox" id="WalletDeleteConfirmationLabel">
+                        I Understand
+                    </label>
+                </div>
+
+                <div class="row py-5">
+                    <div class="col">
+                        <button class="btn btn-outline-warning w-100" type="button" id="DeleteConfirmButton" disabled>Delete</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-outline-primary w-100" type="button" id="DeleteCancelButton">Cancel</button>
+                    </div>
                 </div>
             </div>
 
         </div>
     </div>
+
+    <div class="modal fade" id="SelectAccountModal">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title col-12 modal-title text-center">Select Account</h5>
+                </div>
+                <div class="modal-body">
+                    <div id="AccountSelectListGroup" class="list-group">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#CreateAccountModal">Create New Account</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="CreateAccountModal">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title col-12 modal-title text-center">Create Account</h5>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label" for="NameInput">Enter a name for your wallet</label>
+                    <div class="input-group has-danger has-success">
+                        <input type="text" class="form-control is-invalid" placeholder="name your wallet" id="CreateAccountModalNameInput" autocomplete="off">
+                        <div class="valid-feedback">&nbsp;</div>
+                        <div class="invalid-feedback" id="CreateAccountModalNameInputInvalid">&nbsp;</div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label" for="SeedInput">Existing</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="enter nkn wallet seed" id="CreateAccountModalSeedInput" autocomplete="off" disabled>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <label class="form-label" for="GenerateSeedButton">New</label>
+                            <div class="input-group">
+                                <button class="btn btn-outline-primary" style="width: 100%;" type="button" id="CreateAccountModalGenerateSeedButton" disabled>Generate Wallet</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" style="margin: 0px;" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

@@ -22,7 +22,8 @@ iframe.onload = function () {
 };
 
 async function Startup() {
-    await openAccount('main');
+    let lastUsedName = await getLastUsedAccountName();
+    await openAccount(lastUsedName, await openSession());
 
     chrome.runtime.sendMessage({
         message: "requestPageLoaded",

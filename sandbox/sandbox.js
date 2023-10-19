@@ -30,7 +30,7 @@ window.addEventListener('message', async function (event) {
         event.source.postMessage({ uuid: event.data.uuid, reply: myAddr }, "*");
     }
     else if (event.data.cmd == "getBalance") {
-        await wallet.getBalance().then((value) => {
+        await wallet.getBalance(event.data.addr).then((value) => {
             balance = value.toString();
             event.source.postMessage({ uuid: event.data.uuid, reply: balance }, "*");
         });

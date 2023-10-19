@@ -45,25 +45,37 @@ function validateNameForNns(name) {
 
 
 async function deleteAccount(name) {
+    var accounts = await loadAccountStore();
+    delete accounts[name];
+
     await chrome.storage.local.set(
         {
-            accountStore: {}
+            accountStore: accounts
         },
         null
     );
     location.reload();
 }
 
-async function openAccount(name) {
-    var accounts = await loadAccountStore('');
+async function openAccount(name, password) {
+    var accounts = await loadAccountStore();
     var walletJSON = accounts[name];
 
-    let result = await postToSandbox({ cmd: 'openWallet', json: walletJSON, password: '' });
+    let result = await postToSandbox({ cmd: 'openWallet', json: walletJSON, password: password });
     publicKey = result.publicKey;
-    return result.status == 'SUCCESS';
+
+    if (result.status == 'SUCCESS') {
+        return {
+            Name: name,
+            Address: walletJSON.Address,
+            PublicKey: result.publicKey,
+        }
+    } else {
+        return null;
+    }
 }
 
-async function loadAccountStore(password) {
+async function loadAccountStore() {
     let accountStore = await chrome.storage.local.get(["accountStore"]);
     return accountStore.accountStore ?? {};
 }
@@ -72,7 +84,7 @@ async function createNewAccount(name, seed, password) {
     var accounts = await loadAccountStore();
 
     //TODO: Verify name isnt already used!!
-    var walletJSON = await postToSandbox({ cmd: 'createWallet', seed: seed, password: '' });
+    var walletJSON = await postToSandbox({ cmd: 'createWallet', seed: seed, password: password });
     accounts[name] = walletJSON;
 
     chrome.storage.local.set(
@@ -105,4 +117,104 @@ function debounce(callback, delay = 1000) {
             callback(...args);
         }, delay);
     };
+}
+
+const _eventListenerCache = new Map();
+
+function replaceEventListener(element, event, func) {
+    // Get the unique combination of element and event.
+    const key = `${element.id}-${event}`;
+
+    // If the key is in the cache remove the old listener
+    if (_eventListenerCache.has(key)) {
+        element.removeEventListener(event, _eventListenerCache.get(key));
+    }
+
+    _eventListenerCache.set(key, func);
+
+    // Add the new event listener.
+    element.addEventListener(event, func);
+}
+
+async function getLastUsedAccountName() {
+    return (await chrome.storage.local.get(["lastUsedAccountName"])).lastUsedAccountName;
+}
+
+async function setLastUsedAccountName(name) {
+    await chrome.storage.local.set(
+        {
+            lastUsedAccountName: name
+        },
+        null
+    );
+}
+
+async function openLastUsedAccount(password) {
+    const lastUsedName = await getLastUsedAccountName();
+    let existingWallet = await openAccount(lastUsedName, password);
+
+    if (existingWallet == null) {
+        const accounts = await loadAccountStore();
+        const firstEntryName = Object.keys(accounts)[0];
+        existingWallet = await openAccount(firstEntryName, password);
+    }
+
+    return existingWallet;
+}
+
+async function hashToArray(message) {
+    const msgUint8 = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
+    return Array.from(new Uint8Array(hashBuffer));
+}
+
+function arraysEqual(a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; ++i) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
+
+async function setMasterPassword(password) {
+    const salt = crypto.randomUUID();
+    const hashArray = await hashToArray(password + salt);
+    await chrome.storage.local.set(
+        {
+            masterPassword: { hash: hashArray, salt: salt }
+        },
+        null
+    );
+}
+
+async function verifyMasterPassword(password) {
+    const hashStored = (await chrome.storage.local.get(["masterPassword"])).masterPassword;
+    const knownHashArray = hashStored.hash;
+    const hashArray = await hashToArray(password + hashStored.salt);
+    return arraysEqual(knownHashArray, hashArray);
+}
+
+async function isMasterPasswordSet() {
+    return (await chrome.storage.local.get(["masterPassword"])).masterPassword != null;
+}
+
+async function persistSession(password) {
+    const key = crypto.randomUUID();
+    const encryptedPassword = await aesGcmEncrypt(password, key);
+    await chrome.storage.session.set(
+        {
+            session: { a: encryptedPassword, b: key }
+        },
+        null
+    );
+}
+
+async function openSession() {
+    const storedSession = (await chrome.storage.session.get(["session"])).session;
+    if (storedSession == null) {
+        return null;
+    }
+    return await aesGcmDecrypt(storedSession.a, storedSession.b);
 }

@@ -2,6 +2,7 @@ let sendRecipientContainer;
 let recipientListGroup;
 let recipientInput;
 let amountInput;
+let amountUsdInput;
 let feeContainer;
 let sendConfirmButton;
 let feeSelect;
@@ -9,11 +10,11 @@ let sendStatusContainer;
 
 function resetSendView() {
     recipientInput.value = '';
-    amountInput.value = '';
+    amountInput.value = 0;
+    amountUsdInput.value = 0;
 
     sendRecipientContainer.style.display = 'block'
     recipientInput.style.display = 'block';
-    amountInput.style.display = 'block';
     feeContainer.style.display = 'none';
     sendStatusContainer.style.display = 'none';
 
@@ -27,25 +28,30 @@ function initializeSend() {
     recipientListGroup = document.getElementById('RecipientResultListGroup');
     recipientInput = document.getElementById('RecipientInput');
     amountInput = document.getElementById('AmountInput');
+    amountUsdInput = document.getElementById('AmountUsdInput');
     feeContainer = document.getElementById('FeeContainer');
     sendConfirmButton = document.getElementById('SendConfirmButton');
     feeSelect = document.getElementById('feeRange');
     sendStatusContainer = document.getElementById('SendStatusContainer');
 
 
-    recipientInput.addEventListener('input', (e) => {
+    replaceEventListener(recipientInput, 'input', (e) => {
         populateRecipientList(e.target.value);
     });
 
-    amountInput.addEventListener('input', (e) => {
+    replaceEventListener(amountInput, 'input', (e) => {
         processAmountInput(e.target.value);
     });
 
-    feeSelect.addEventListener('input', function () {
+    replaceEventListener(amountUsdInput, 'input', (e) => {
+        processAmountUsdInput(e.target.value);
+    });
+
+    replaceEventListener(feeSelect, 'input', function () {
         processFeeSelectInput(this.value);
     });
 
-    sendConfirmButton.addEventListener('click', async () => {
+    replaceEventListener(sendConfirmButton, 'click', async () => {
         let transferBody = {
             cmd: 'transfer',
             address: recipientInput.value,
@@ -65,6 +71,19 @@ function initializeSend() {
             humane.log(`❌ ${sendResult}`);
         }
         focusMainContent();
+    });
+
+    replaceEventListener(amountInput, 'keyup', function (event) {
+        if (event.key === 'Enter') {
+            // Call the same function that is called when the confirm button is clicked.
+            sendConfirmButton.click();
+        }
+    });
+    replaceEventListener(amountUsdInput, 'keyup', function (event) {
+        if (event.key === 'Enter') {
+            // Call the same function that is called when the confirm button is clicked.
+            sendConfirmButton.click();
+        }
     });
 }
 
@@ -176,7 +195,29 @@ async function updateRegistrantElement(cacheName, item) {
 }
 
 function processAmountInput(value) {
+    const val = (value * price).toLocaleString('en-US', {
+        maximumFractionDigits: 2
+    });
 
+    amountUsdInput.value = parseFormattedNumber(val);
+}
+
+function processAmountUsdInput(value) {
+    const val = (value / price).toLocaleString('en-US', {
+        maximumFractionDigits: 8
+    });
+    amountInput.value = parseFormattedNumber(val);
+}
+
+function parseFormattedNumber(numberString) {
+    // Remove all commas from the number string.
+    numberString = numberString.replace(/,/g, '');
+
+    // Convert the number string to a float using the `parseFloat()` function.
+    const number = parseFloat(numberString, 'en-US');
+
+    // Return the parsed number.
+    return number;
 }
 
 async function processRecipientInput(input) {

@@ -33,7 +33,7 @@ function initializeContacts() {
     contactAddressInput = document.getElementById('ContactAddressInput');
     contactsAddButton = document.getElementById('ContactsAddButton');
 
-    contactEditButton.addEventListener('click', () => {
+    replaceEventListener(contactEditButton, 'click', () => {
         contactViewButtons.style.display = 'none';
         contactViewEditButtons.style.display = 'flex';
 
@@ -43,7 +43,7 @@ function initializeContacts() {
         cachedEditName = contactNameInput.value;
     });
 
-    contactSaveButton.addEventListener('click', () => {
+    replaceEventListener(contactSaveButton, 'click', () => {
         contactViewButtons.style.display = 'block';
         contactViewEditButtons.style.display = 'none';
 
@@ -54,14 +54,14 @@ function initializeContacts() {
         saveContact(contactNameInput.value, contactAddressInput.value);
     });
 
-    contactDeleteButton.addEventListener('click', () => {
+    replaceEventListener(contactDeleteButton, 'click', () => {
         contactViewButtons.style.display = 'block';
         contactViewEditButtons.style.display = 'none';
         deleteContact(contactNameInput.value);
         resetContactsView();
     });
 
-    contactsAddButton.addEventListener('click', () => {
+    replaceEventListener(contactsAddButton, 'click', () => {
         contactListContainer.style.display = 'none';
         contactViewContainer.style.display = 'block';
         contactViewButtons.style.display = 'block';
@@ -80,7 +80,7 @@ function initializeContacts() {
     });
 
 
-    contactNameInput.addEventListener('input', async (e) => {
+    replaceEventListener(contactNameInput, 'input', async (e) => {
         let value = e.target.value;
 
         //If a valid NKN address is entered go right away!!
@@ -91,7 +91,7 @@ function initializeContacts() {
         contactSaveButton.setAttribute('disabled', '');
     });
 
-    contactAddressInput.addEventListener('input', async (e) => {
+    replaceEventListener(contactAddressInput, 'input', async (e) => {
         let value = e.target.value;
 
         //If a valid NKN address is entered go right away!!

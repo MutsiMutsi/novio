@@ -1,18 +1,29 @@
 function initializeAccount() {
-    document.getElementById("WalletDeleteButton").addEventListener("click", () => {
+    replaceEventListener(document.getElementById("WalletDeleteButton"), "click", () => {
         document.getElementById("AccountInfoBox").style.display = 'none';
         document.getElementById("DeleteWalletConfirmBox").style.display = 'block';
+
+        document.getElementById("WalletDeleteConfirmationLabel").innerHTML = `I understand that this action is irreversable, wallet <strong>'${currentAccount.Name}'</strong> will be removed from Novio. If you have no backup of this wallet your funds will be lost.`;
     });
 
-    document.getElementById("DeleteConfirmButton").addEventListener("click", () => {
-        deleteAccount('main');
+    replaceEventListener(document.getElementById('WalletDeleteConfirmationCheckbox'), 'change', (cb) => {
+        if (cb.target.checked) {
+            document.getElementById("DeleteConfirmButton").removeAttribute('disabled');
+        } else {
+            document.getElementById("DeleteConfirmButton").setAttribute('disabled', '');
+        }
     });
 
-    document.getElementById("DeleteCancelButton").addEventListener("click", () => {
+    replaceEventListener(document.getElementById("DeleteConfirmButton"), "click", () => {
+        deleteHistory();
+        deleteAccount(currentAccount.Name);
+    });
+
+    replaceEventListener(document.getElementById("DeleteCancelButton"), "click", () => {
         resetAccount();
     });
 
-    document.getElementById("ExportSeedButton").addEventListener('click', async () => {
+    replaceEventListener(document.getElementById("ExportSeedButton"), 'click', async () => {
         document.getElementById("ExportSeedButton").style.display = 'none';
         document.getElementById("SeedDisplayGroup").style.display = 'flex';
         document.getElementById("SeedExport").value = await postToSandbox({ cmd: 'exportSeed' });;
@@ -20,15 +31,15 @@ function initializeAccount() {
 
 
     //Copy buttons
-    document.getElementById('AccountAddressInputCopy').addEventListener('click', (e) => {
+    replaceEventListener(document.getElementById('AccountAddressInputCopy'), 'click', (e) => {
         e.currentTarget.innerHTML = `<i class="bi bi-clipboard-check"></i>`;
         navigator.clipboard.writeText(document.getElementById('AccountAddressInput').value);
     });
-    document.getElementById('PublicKeyInputCopy').addEventListener('click', (e) => {
+    replaceEventListener(document.getElementById('PublicKeyInputCopy'), 'click', (e) => {
         e.currentTarget.innerHTML = `<i class="bi bi-clipboard-check"></i>`;
         navigator.clipboard.writeText(document.getElementById('PublicKeyInput').value);
     });
-    document.getElementById('SeedExportCopy').addEventListener('click', (e) => {
+    replaceEventListener(document.getElementById('SeedExportCopy'), 'click', (e) => {
         e.currentTarget.innerHTML = `<i class="bi bi-clipboard-check"></i>`;
         navigator.clipboard.writeText(document.getElementById('SeedExport').value);
     });
@@ -40,7 +51,7 @@ function resetAccount() {
     document.getElementById("ExportSeedButton").style.display = 'block';
     document.getElementById("SeedDisplayGroup").style.display = 'none';
 
-    document.getElementById("AccountAddressInput").value = address;
-    document.getElementById("PublicKeyInput").value = publicKey;
+    document.getElementById("AccountAddressInput").value = currentAccount.Address;
+    document.getElementById("PublicKeyInput").value = currentAccount.PublicKey;
     document.getElementById("SeedExport").value = '';
 }
