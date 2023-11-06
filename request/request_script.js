@@ -1,5 +1,6 @@
 var iframe = document.getElementById('sandboxFrame');
 var fees;
+let currentAccount;
 
 //Listen to foreground/background messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -28,7 +29,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             else {
                 let dataValueIndex = typeDataDisplayIndex[request.data.type];
                 let displayValue = request.data.data[dataValueIndex];
-                addTransactionHistory(typeDisplay[request.data.type], displayValue, sendTxReply);
+                addTransactionRow(typeDisplay[request.data.type], displayValue, sendTxReply);
 
                 this.document.getElementById("progressDisplay").style.display = 'none';
                 this.document.getElementById("waitingIcon").style.display = 'none';
@@ -48,7 +49,7 @@ iframe.onload = function () {
 async function Startup() {
 
     let lastUsedName = await getLastUsedAccountName();
-    await openAccount(lastUsedName, await openSession());
+    currentAccount = await openAccount(lastUsedName, await openSession());
     postToSandbox({ cmd: 'getFee' }).then((fee) => {
         this.document.getElementById("transactionConfirm").disabled = false
 
@@ -159,20 +160,4 @@ function generateTransactionDataHtml(requestData) {
     html += `<h4> Fee</h4>`;
 
     return html;
-}
-
-function addTransactionHistory(type, value, hash) {
-    chrome.storage.local.get(["txHistory"]).then((result) => {
-        let transactionHistory = result.txHistory;
-        if (!transactionHistory) {
-            transactionHistory = [];
-        }
-        transactionHistory.push({
-            date: +new Date(),
-            type: type,
-            value: value,
-            txHash: hash
-        })
-        chrome.storage.local.set({ txHistory: transactionHistory }, null);
-    });
 }
