@@ -36,8 +36,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 this.document.getElementById("successIcon").style.display = 'block';
             }
         };
+        return true;
     }
-    return true;
 });
 
 //Trigger reload to make sure the sandbox libraries are loaded and available when popoup opens.

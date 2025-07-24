@@ -22,6 +22,7 @@ if (!document.novioWalletConnected) {
         chrome.runtime.sendMessage({
             message: "onNovioSignRequest",
             data: event.detail.data,
+            allowClient: event.detail.allowClient,
         }, (response) => {
             const signResponseEvent = new CustomEvent("onNovioSignResponse", {
                 bubbles: true,
@@ -53,6 +54,39 @@ if (!document.novioWalletConnected) {
         });
         document.dispatchEvent(onNovioDisconnectedEvent);
     });
+
+    //Listen to background messages
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.message == 'onNovioClientMessage') {
+            const onNovioClientMessageEvent = new CustomEvent("onNovioClientMessage", {
+                "bubbles": true,
+                "cancelable": false,
+                "detail": {
+                    message: request.data
+                },
+            });
+            document.dispatchEvent(onNovioClientMessageEvent);
+        }
+        else if (request.message == 'onNovioClientPing') {
+            const onNovioCLientPingEvent = new CustomEvent("onNovioClientPing", {
+                "bubbles": true,
+                "cancelable": false,
+                "detail": {
+                    message: request.data
+                },
+            });
+            document.dispatchEvent(onNovioCLientPingEvent);
+        }
+    });
+
+    //Listen for clientSend requests
+    document.addEventListener('onNovioClientSend', novioClientSend);
+    function novioClientSend(event) {
+        chrome.runtime.sendMessage({
+            message: "onNovioClientSend",
+            data: event.detail.data,
+        });
+    }
 }
 
 document.novioWalletConnected = true;

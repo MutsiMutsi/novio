@@ -11,8 +11,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
             sendResponse(signResult);
         };
+        return true;
     }
-    return true;
 });
 
 //Trigger reload to make sure the sandbox libraries are loaded and available when popoup opens.

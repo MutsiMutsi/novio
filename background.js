@@ -4,9 +4,9 @@ let tabId = -1;
 let windowId = -1;
 let requestTabId = -1;
 let requestPopupWindow;
+let offscreenClientTab = -1;
 
-
-chrome.runtime.onConnect.addListener(function (port) {
+chrome.runtime.onConnect.addListener(async function (port) {
 }); // just accept connection
 
 async function getCurrentTab() {
@@ -32,7 +32,6 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-
     if (request.message === 'executeForeground') {
         try {
             chrome.scripting.executeScript({
@@ -47,11 +46,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
     }
 
-    if (request.message === 'requestPageLoaded') {
+    else if (request.message === 'requestPageLoaded') {
         waitingForRequestPage = false;
     }
 
-    if (request.message === 'onNovioTxRequest' || request.message === 'onNovioSignRequest') {
+    else if (request.message === 'onNovioTxRequest' || request.message === 'onNovioSignRequest') {
         if (requestPopupWindow) {
             chrome.windows.remove(requestPopupWindow.id);
             requestPopupWindow = null;
@@ -62,9 +61,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             chrome.windows.getCurrent((currentWindow) => {
                 windowId = currentWindow.id;
                 openRequest(request, sendResponse);
+                return true;
             })
         } else {
             openRequest(request, sendResponse);
+            return true;
+        }
+    }
+
+    else if (request.message === 'onNovioClientMessage') {
+        if (offscreenClientTab !== -1) {
+            chrome.tabs.sendMessage(
+                offscreenClientTab,
+                { message: 'onNovioClientMessage', target: 'foreground', data: request.data }
+            );
+        } else {
+            chrome.offscreen.closeDocument();
+        }
+    } else if (request.message === 'onNovioClientSend') {
+        chrome.runtime.sendMessage({
+            target: 'offscreen',
+            message: 'clientSend',
+            data: request.data
+        });
+    } else if (request.message === 'onNovioClientPing') {
+        if (offscreenClientTab !== -1) {
+            chrome.tabs.sendMessage(
+                offscreenClientTab,
+                { message: 'onNovioClientPing', target: 'foreground', data: request.data }
+            ).then(response => {
+                //No problems...
+            }).catch((onError) => {
+                offscreenClientTab = -1;
+                console.warn('client connection to tab lost, closing offscreen document...', onError);
+                chrome.offscreen.closeDocument();
+            });
+        } else {
+            console.warn('client connection to tab lost, closing offscreen document...');
+            chrome.offscreen.closeDocument();
         }
     }
 
@@ -120,8 +154,9 @@ function openRequest(request, sendResponse) {
             else if (request.message === 'onNovioSignRequest') {
                 chrome.runtime.sendMessage({
                     message: "signRequestData",
-                    data: request.data
-                }, (result) => {
+                    data: request.data,
+                    allowClient: request.allowClient
+                }, async (result) => {
                     if (chrome.runtime.lastError) {
                         sendResponse({
                             error: 'cancelled'
@@ -130,6 +165,14 @@ function openRequest(request, sendResponse) {
                         if (requestPopupWindow) {
                             chrome.windows.remove(requestPopupWindow.id);
                             requestPopupWindow = null;
+                        }
+
+                        if (request.allowClient) {
+                            if (offscreenClientTab !== -1) {
+                                await chrome.offscreen.closeDocument();
+                            }
+                            await setupOffscreenSandbox();
+                            offscreenClientTab = tabId;
                         }
                         sendResponse(result);
                     }
@@ -144,3 +187,75 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+let creating; // A global promise to avoid concurrency issues
+async function setupOffscreenSandbox() {
+    // Check all windows controlled by the service worker to see if one 
+    // of them is the offscreen document with the given path
+    const offscreenUrl = chrome.runtime.getURL('offscreen.html');
+    const existingContexts = await chrome.runtime.getContexts({
+        contextTypes: ['OFFSCREEN_DOCUMENT'],
+        documentUrls: [offscreenUrl]
+    });
+
+    if (existingContexts.length > 0) {
+        return;
+    }
+
+    // create offscreen document
+    if (creating) {
+        await creating;
+    } else {
+        creating = chrome.offscreen.createDocument({
+            url: 'offscreen.html',
+            reasons: [chrome.offscreen.Reason.IFRAME_SCRIPTING],
+            justification: 'secure sandbox nkn client',
+        });
+        let created = await creating;
+        creating = null;
+        await authenticateOffscreen();
+        return created;
+    }
+}
+
+// Send message to offscreen document
+async function authenticateOffscreen() {
+    let lastUsedName = (await chrome.storage.local.get(["lastUsedAccountName"])).lastUsedAccountName;
+    const storedSession = (await chrome.storage.session.get(["session"])).session;
+    if (storedSession == null) {
+        return null;
+    }
+    let decrypted = await aesGcmDecrypt(storedSession.a, storedSession.b);
+
+    var accounts = await chrome.storage.local.get(["accountStore"]);
+    var walletJSON = accounts.accountStore[lastUsedName];
+
+    chrome.runtime.sendMessage({
+        message: "clientAuthenticate",
+        walletJson: walletJSON,
+        walletPassword: decrypted,
+    });
+}
+
+async function aesGcmDecrypt(ciphertext, password) {
+    const pwUtf8 = new TextEncoder().encode(password);                                 // encode password as UTF-8
+    const pwHash = await crypto.subtle.digest('SHA-256', pwUtf8);                      // hash the password
+
+    const ivStr = atob(ciphertext).slice(0, 12);                                        // decode base64 iv
+    const iv = new Uint8Array(Array.from(ivStr).map(ch => ch.charCodeAt(0)));          // iv as Uint8Array
+
+    const alg = { name: 'AES-GCM', iv: iv };                                           // specify algorithm to use
+
+    const key = await crypto.subtle.importKey('raw', pwHash, alg, false, ['decrypt']); // generate key from pw
+
+    const ctStr = atob(ciphertext).slice(12);                                          // decode base64 ciphertext
+    const ctUint8 = new Uint8Array(Array.from(ctStr).map(ch => ch.charCodeAt(0)));     // ciphertext as Uint8Array
+    // note: why doesn't ctUint8 = new TextEncoder().encode(ctStr) work?
+
+    try {
+        const plainBuffer = await crypto.subtle.decrypt(alg, key, ctUint8);            // decrypt ciphertext using key
+        const plaintext = new TextDecoder().decode(plainBuffer);                       // plaintext from ArrayBuffer
+        return plaintext;                                                              // return the plaintext
+    } catch (e) {
+        throw new Error('Decrypt failed');
+    }
+}

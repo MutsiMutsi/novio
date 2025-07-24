@@ -1,6 +1,7 @@
 let myAddr = "Loading...";
 let balance = "Loading...";
 let wallet;
+let client;
 
 function createWallet(password, seed) {
     try {
@@ -68,6 +69,12 @@ window.addEventListener('message', async function (event) {
         event.source.postMessage({ uuid: event.data.uuid, reply: await getRegistrant(event.data.name) }, "*");
     } else if (event.data.cmd == "exportSeed") {
         event.source.postMessage({ uuid: event.data.uuid, reply: wallet.account.key.seed }, "*");
+    } else if (event.data.cmd == "getClient") {
+        event.source.postMessage({ uuid: event.data.uuid, reply: await getClient(event.source) }, "*");
+    } else if (event.data.cmd == "clientSend") {
+        event.source.postMessage({ uuid: event.data.uuid, reply: await clientSend(event.data.data.addr, event.data.data.payload) }, "*");
+    } else if (event.data.cmd == "pingClient") {
+        event.source.postMessage({ uuid: event.data.uuid, reply: client.isReady }, "*");
     }
 });
 
@@ -144,4 +151,46 @@ async function getRegistrant(name) {
     } else {
         return '';
     }
+}
+
+async function getClient(eventSource) {
+    client = new nkn.MultiClient({
+        seed: wallet.account.key.seed,
+        rpcServerAddr: 'http://85.215.219.214:30003'
+    });
+
+    client.onMessage(({ src, payload }) => {
+        console.log('Receive message', payload, 'from', src);
+        eventSource.postMessage({ clientMsg: payload, clientSrc: src }, "*");
+    });
+
+    return new Promise((resolve) => {
+        client.onConnect(() => {
+            resolve(client.addr);
+        });
+    });
+}
+
+async function clientSend(addr, payload) {
+    let retryCount = 0;
+    while (!client.isReady) {
+        await new Promise(r => setTimeout(r, 2000));
+        console.log(`[${retryCount}] client not ready to send - received:`, payload);
+        retryCount++;
+
+        if (retryCount == 15) {
+            return;
+        }
+    }
+
+    await client.send(
+        addr,
+        payload,
+    ).then((reply) => {
+        // The reply here can be either string or Uint8Array
+        console.log('Receive reply:', reply);
+    }).catch((e) => {
+        // This will most likely to be timeout
+        console.warn('Sandbox send failed:', e);
+    });
 }
