@@ -43,5 +43,26 @@
         "storage",
         "scripting",
         "offscreen"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content-script.js"
+            ],
+            "run_at": "document_start"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "injected-provider.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
     ]
 }

@@ -65,7 +65,7 @@ function initializeSend() {
 
         var sendResult = await postToSandbox(transferBody);
         if (validateTransactionHexValue(sendResult)) {
-            addTransactionRow("Transfer", transferBody.amount, sendResult);
+            addTransactionRow("Transfer", transferBody.amount, sendResult, currentAccount.Address);
             humane.log("✔ transfer successful");
         } else {
             humane.log(`❌ ${sendResult}`);

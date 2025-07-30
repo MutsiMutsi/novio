@@ -7,7 +7,7 @@ function initializeHistory() {
 }
 
 function loadTransactionHistory() {
-    const key = getStoreKey();
+    const key = getStoreKey(currentAccount.Address);
 
     chrome.storage.local.get([key]).then((result) => {
         if (result[key]) {
@@ -19,7 +19,7 @@ function loadTransactionHistory() {
     });
 }
 
-function addTransactionRow(type, value, txHash) {
+function addTransactionRow(type, value, txHash, accountAddress) {
     let tx = {
         date: +new Date(),
         type: type,
@@ -28,7 +28,7 @@ function addTransactionRow(type, value, txHash) {
     };
     transactionHistory.push(tx)
 
-    const key = getStoreKey();
+    const key = getStoreKey(accountAddress);
     let store = {};
     store[key] = transactionHistory;
     chrome.storage.local.set(store, null);
@@ -49,14 +49,14 @@ function addTransactionRowElement(transaction) {
     item.innerHTML = `<i class="bi bi-credit-card"></i> ${transaction.type}<small style="float: right; color:var(--bs-secondary);">${formattedDate}</small>
     <br>
     <small style="color:var(--bs-secondary)">${transaction.value} NKN</small>
-    <a class="btn-sm" href="https://nscan.io/transactions/${transaction.txHash}" target="_blank" style="float: right;"><i class="bi-box-arrow-up-right"></i></a>`;
+    <a class="btn-sm" href="https://nstatus.org/ntrack/?s=${transaction.txHash}" target="_blank" style="float: right;"><i class="bi-box-arrow-up-right"></i></a>`;
     document.getElementById('HistoryListGroup').prepend(item);
 }
 
-function getStoreKey() {
-    return historyStoreKeyTemplate + currentAccount.Address;
+function getStoreKey(accountAddress) {
+    return historyStoreKeyTemplate + accountAddress;
 }
 
 function deleteHistory() {
-    chrome.storage.local.remove([getStoreKey()]);
+    chrome.storage.local.remove([getStoreKey(currentAccount.Address)]);
 }

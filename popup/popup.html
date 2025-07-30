@@ -21,6 +21,8 @@
 
     <script src="../shared/crypto-aes-gcm.js"></script>
     <script src="../shared/util.js"></script>
+    <script src="../shared/pictogram.js"></script>
+
     <script src="./popup.js"></script>
     <script src="./dashboard.js"></script>
     <script src="./contacts.js"></script>
@@ -83,7 +85,19 @@
 
     <div class="app-content main-div" style="display: none;" id="DashboardContent">
         <header class="mb-3 border-primary" style="text-align: center; padding-top: 1rem!important;">
-            <h1>novio</h1>
+
+            <span class="AccountSwitch NoSelect" data-bs-toggle="modal" data-bs-target="#SelectAccountModal">
+                <div class="wallet-identity" style="display: inline-block;">
+                    <div class="wallet-details">
+                        <h3 id="walletName">Novio Wallet</h3>
+                        <p class="wallet-address" id="walletAddress">0x1234...5678</p>
+                    </div>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+            </span>
+
+            <div class="wallet-avatar" id="walletAvatar" style="position: absolute; left: 1rem; top: 1rem; display: block;"></div>
+
             <button type="button" class="btn btn-outline-secondary" style="position: absolute; right: 1rem; top: 1rem; display: block;" id="AccountButton">
                 <span class="bi bi-gear"></span>
             </button>
@@ -92,8 +106,6 @@
 
         <div class="container text-center">
             <div class="balanceBox mb-3 py-3" style="text-align: center;">
-                <span class="AccountSwitch NoSelect" data-bs-toggle="modal" data-bs-target="#SelectAccountModal"><span id="AccountName">main</span> <i class="bi bi-chevron-down"></i>
-                </span>
                 <div class="balanceBoxValueNkn lighterText">
                     <span style="font-size: 38px;" id="BalanceNKNSpan">Loading...</span>
                 </div>
@@ -101,40 +113,41 @@
                     <span style="font-size: 24px;" id="BalanceUSDSpan">Loading...</span>
                 </div>
             </div>
+        </div>
 
-            <div class="buttonBox mb-3 py-3 NoSelect" style="text-align: center;">
-                <div class="row">
-                    <div class="col buttonColumn" id="SendButton">
-                        <button type="button" class="btn btn-primary rounded-circle">
-                            <span class="bi bi-arrow-up-right"></span>
-                        </button>
-                        <br>
-                        Send
-                    </div>
-                    <div class="col buttonColumn" id="ReceiveButton">
-                        <button type="button" class="btn btn-primary rounded-circle">
-                            <span class="bi bi-arrow-down-left"></span>
-                        </button>
-                        <br>
-                        Receive
-                    </div>
-                    <div class="col buttonColumn" id="ContactsButton">
-                        <button type="button" class="btn btn-primary rounded-circle">
-                            <span class="bi bi-person-lines-fill"></span>
-                        </button>
-                        <br>
-                        Contacts
-                    </div>
-                    <div class="col buttonColumn" id="HistoryButton">
-                        <button type="button" class="btn btn-primary rounded-circle">
-                            <span class="bi bi-clock-history"></span>
-                        </button>
-                        <br>
-                        History
-                    </div>
+        <div class="buttonBox mb-3 py-3 NoSelect" style="text-align: center;">
+            <div class="row">
+                <div class="col buttonColumn" id="SendButton">
+                    <button type="button" class="btn btn-primary rounded-circle">
+                        <span class="bi bi-arrow-up-right"></span>
+                    </button>
+                    <br>
+                    Send
+                </div>
+                <div class="col buttonColumn" id="ReceiveButton">
+                    <button type="button" class="btn btn-primary rounded-circle">
+                        <span class="bi bi-arrow-down-left"></span>
+                    </button>
+                    <br>
+                    Receive
+                </div>
+                <div class="col buttonColumn" id="ContactsButton">
+                    <button type="button" class="btn btn-primary rounded-circle">
+                        <span class="bi bi-person-lines-fill"></span>
+                    </button>
+                    <br>
+                    Contacts
+                </div>
+                <div class="col buttonColumn" id="HistoryButton">
+                    <button type="button" class="btn btn-primary rounded-circle">
+                        <span class="bi bi-clock-history"></span>
+                    </button>
+                    <br>
+                    History
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <!--APP SEND COMPONENT-->

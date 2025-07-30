@@ -23,6 +23,25 @@ async function postToSandbox(message) {
     });
 }
 
+async function postToIFrame(message, iFrame) {
+    let uuid = crypto.randomUUID();
+
+    return new Promise((resolve, _) => {
+        //listen for sandbox reply
+        window.addEventListener('message', function messageHandler(event) {
+            if (event.data.uuid == uuid) {
+                //cleanup and resolve
+                this.window.removeEventListener('message', messageHandler);
+                resolve(event.data.reply);
+            }
+        });
+        //post message to sandbox
+        message.uuid = uuid;
+
+        iFrame.contentWindow.postMessage(message, "*");
+    });
+}
+
 function validateTransactionHexValue(hexValue) {
     // Check if the string length is 64 characters.
     if (hexValue.length !== 64) {
@@ -60,8 +79,25 @@ async function deleteAccount(name) {
 async function openAccount(name, password) {
     var accounts = await loadAccountStore();
     var walletJSON = accounts[name];
-
     let result = await postToSandbox({ cmd: 'openWallet', json: walletJSON, password: password });
+    publicKey = result.publicKey;
+
+    if (result.status == 'SUCCESS') {
+        return {
+            Name: name,
+            Address: walletJSON.Address,
+            PublicKey: result.publicKey,
+        }
+    } else {
+        return null;
+    }
+}
+
+async function openAccountInIFrame(name, password, iFrame) {
+    var accounts = await loadAccountStore();
+    var walletJSON = accounts[name];
+
+    let result = await postToIFrame({ cmd: 'openWallet', json: walletJSON, password: password }, iFrame);
     publicKey = result.publicKey;
 
     if (result.status == 'SUCCESS') {
@@ -217,4 +253,40 @@ async function openSession() {
         return null;
     }
     return await aesGcmDecrypt(storedSession.a, storedSession.b);
+}
+
+function resizeWindowToFitBody() {
+    // First, temporarily reset any body margin/padding to ensure accurate measurement
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+
+    // Get the current body content size
+    const body = document.body;
+    const html = document.documentElement;
+
+    const contentWidth = Math.max(
+        body.scrollWidth,
+        body.offsetWidth,
+        html.clientWidth,
+        html.scrollWidth,
+        html.offsetWidth
+    );
+
+    const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        html.clientHeight,
+        html.scrollHeight,
+        html.offsetHeight
+    );
+
+    // Measure the difference between inner and outer window sizes
+    const widthDiff = window.outerWidth - window.innerWidth;
+    const heightDiff = window.outerHeight - window.innerHeight;
+
+    // Resize the window so that the inner size fits the content
+    const targetWidth = contentWidth + widthDiff + 16;
+    const targetHeight = contentHeight + heightDiff + 8;
+
+    window.resizeTo(targetWidth, targetHeight);
 }

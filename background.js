@@ -1,119 +1,114 @@
 let waitingForRequestPage = true;
-
-let tabId = -1;
-let windowId = -1;
-let requestTabId = -1;
 let requestPopupWindow;
-let offscreenClientTab = -1;
+let currentAccount;
+
+
+let portToOffscreen;
 
 chrome.runtime.onConnect.addListener(async function (port) {
 }); // just accept connection
 
-async function getCurrentTab() {
-    let queryOptions = { active: true, lastFocusedWindow: true };
-    let [tab] = await chrome.tabs.query(queryOptions);
-    return tab;
-}
-
-chrome.windows.onFocusChanged.addListener(async (focusInfo) => {
-    var currentTab = await getCurrentTab();
-    if (currentTab) {
-        tabId = currentTab.id;
-        windowId = focusInfo;
-    }
-});
-
-chrome.tabs.onActivated.addListener((activeInfo) => {
-    if (activeInfo.tabId == requestTabId) {
-        return;
-    }
-    tabId = activeInfo.tabId;
-    windowId = activeInfo.windowId;
-});
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.message === 'executeForeground') {
-        try {
-            chrome.scripting.executeScript({
-                target: { tabId: tabId },
-                files: ["./foreground.js"]
-            }).catch((error) => {
-                console.log(error);
-            })
-        } catch (error) {
-            //Some pages like chrome extensions block scripting, digest this exception.
-            console.log(error);
-        }
+
+    if (request.fromOffscreen) {
+        return handleOffscreenMessages(request, sender, sendResponse);
     }
 
     else if (request.message === 'requestPageLoaded') {
         waitingForRequestPage = false;
+        sendResponse({ success: true });
+        return false; // Synchronous response
     }
 
-    else if (request.message === 'onNovioTxRequest' || request.message === 'onNovioSignRequest') {
-        if (requestPopupWindow) {
-            chrome.windows.remove(requestPopupWindow.id);
-            requestPopupWindow = null;
-        }
+    else if (request.message === 'onNovioTxRequest') {
+        //You need to be authenticated to send requests.
+        getTabWallet('' + sender.tab?.id).then((assignedWallet) => {
+            if (assignedWallet == null) {
+                sendResponse({
+                    error: `Not authenticated`
+                })
+                return false;
+            }
 
-        //when the background goes to sleep we lose track so we fetch it instead
-        if (windowId = -1) {
-            chrome.windows.getCurrent((currentWindow) => {
-                windowId = currentWindow.id;
-                openRequest(request, sendResponse);
-                return true;
-            })
-        } else {
-            openRequest(request, sendResponse);
+            if (requestPopupWindow) {
+                chrome.windows.remove(requestPopupWindow.id);
+                requestPopupWindow = null;
+            }
+
+            if (chrome.runtime.lastError) {
+                sendResponse({ error: chrome.runtime.lastError.message });
+                return;
+            }
+
+            openTransactionRequest(request, sendResponse, sender, assignedWallet);
             return true;
-        }
+        })
+        return true;
     }
+    else if (request.message === 'onNovioSignRequest') {
+        //first open the wallet if the extension is locked.
+        const readyForRequest = new Promise((resolve) => {
+            if (currentAccount == null) {
 
-    else if (request.message === 'onNovioClientMessage') {
-        if (offscreenClientTab !== -1) {
-            chrome.tabs.sendMessage(
-                offscreenClientTab,
-                { message: 'onNovioClientMessage', target: 'foreground', data: request.data }
-            );
-        } else {
-            chrome.offscreen.closeDocument();
-        }
-    } else if (request.message === 'onNovioClientSend') {
+                chrome.action.openPopup().catch((err) => {
+                    console.error("Failed to open popup:", err);
+                });
+
+                chrome.runtime.onMessage.addListener((innerRequest, sender, sendResponse) => {
+                    if (innerRequest.message === 'NovioAccountOpened') {
+                        resolve();
+                    }
+                });
+            }
+            else {
+                resolve();
+            }
+        })
+
+        readyForRequest.then(() => {
+            if (requestPopupWindow) {
+                chrome.windows.remove(requestPopupWindow.id);
+                requestPopupWindow = null;
+            }
+
+            if (chrome.runtime.lastError) {
+                sendResponse({ error: chrome.runtime.lastError.message });
+                return;
+            }
+
+            openSignRequest(request, sendResponse, sender);
+        })
+
+        return true; // We're sending an async response
+    }
+    else if (request.message === 'onNovioClientSend') {
         chrome.runtime.sendMessage({
             target: 'offscreen',
             message: 'clientSend',
-            data: request.data
+            data: request.data,
+            tabId: sender.tab?.id,
         });
-    } else if (request.message === 'onNovioClientPing') {
-        if (offscreenClientTab !== -1) {
-            chrome.tabs.sendMessage(
-                offscreenClientTab,
-                { message: 'onNovioClientPing', target: 'foreground', data: request.data }
-            ).then(response => {
-                //No problems...
-            }).catch((onError) => {
-                offscreenClientTab = -1;
-                console.warn('client connection to tab lost, closing offscreen document...', onError);
-                chrome.offscreen.closeDocument();
-            });
-        } else {
-            console.warn('client connection to tab lost, closing offscreen document...');
-            chrome.offscreen.closeDocument();
-        }
+        sendResponse({ success: true });
+        return false; // Synchronous response
+    }
+    else if (request.message === 'NovioAccountOpened') {
+        currentAccount = request.account;
+        sendResponse({ success: true });
+        return false; // Synchronous response
     }
 
-    return true;
+    // For any unhandled messages
+    sendResponse({ error: 'Unknown message type' });
+    return false;
 });
 
-function openRequest(request, sendResponse) {
-    chrome.windows.get(windowId, async (tabWindow) => {
-        let width = 417;
-        let height = 564;
-
-        let url = 'request/request.html';
-        if (request.message === 'onNovioSignRequest') {
-            url = 'request/sign.html';
-            height = 320;
+async function openSignRequest(request, sendResponse, sender) {
+    chrome.windows.get(sender.tab.windowId, async (tabWindow) => {
+        const width = 440;
+        let height = 310;
+        const url = 'request/sign.html';
+        if (request.allowClient) {
+            height += 20;
         }
 
         const left = Math.round((tabWindow.width - width) * 0.5 + tabWindow.left)
@@ -129,33 +124,17 @@ function openRequest(request, sendResponse) {
             type: 'popup',
             url: url,
         });
-        requestTabId = requestPopupWindow.tabs[0].id;
 
         setTimeout(async () => {
             while (waitingForRequestPage) {
                 await sleep(50);
             }
-
-            if (request.message === 'onNovioTxRequest') {
-                chrome.runtime.sendMessage({
-                    message: "transactionRequestData",
-                    data: request.data
-                }, (result) => {
-                    if (chrome.runtime.lastError) {
-                        sendResponse({
-                            error: 'cancelled'
-                        });
-                    } else {
-                        sendResponse(result);
-                    }
-                    requestPopupWindow = null;
-                });
-            }
-            else if (request.message === 'onNovioSignRequest') {
+            if (request.message === 'onNovioSignRequest') {
                 chrome.runtime.sendMessage({
                     message: "signRequestData",
                     data: request.data,
-                    allowClient: request.allowClient
+                    allowClient: request.allowClient,
+                    account: currentAccount
                 }, async (result) => {
                     if (chrome.runtime.lastError) {
                         sendResponse({
@@ -167,13 +146,17 @@ function openRequest(request, sendResponse) {
                             requestPopupWindow = null;
                         }
 
+                        setTabWallet('' + sender.tab?.id, currentAccount.Name);
+
                         if (request.allowClient) {
-                            if (offscreenClientTab !== -1) {
+                            try {
                                 await chrome.offscreen.closeDocument();
+                            } catch (error) {
+                                //We clean up first, but if there is no offscreen document we dont want any errors to show, thats fine.
                             }
-                            await setupOffscreenSandbox();
-                            offscreenClientTab = tabId;
+                            await setupOffscreenSandbox(sender);
                         }
+
                         sendResponse(result);
                     }
                     requestPopupWindow = null;
@@ -183,12 +166,54 @@ function openRequest(request, sendResponse) {
     })
 }
 
+async function openTransactionRequest(request, sendResponse, sender, assignedWallet) {
+    chrome.windows.get(sender.tab.windowId, async (tabWindow) => {
+        const width = 420;
+        const height = 280;
+        const url = 'request/request.html';
+        const left = Math.round((tabWindow.width - width) * 0.5 + tabWindow.left)
+        const top = Math.round((tabWindow.height - height) * 0.5 + tabWindow.top)
+
+        waitingForRequestPage = true;
+        requestPopupWindow = await chrome.windows.create({
+            width: width,
+            height: height,
+            top: Math.round(top),
+            left: Math.round(left),
+            focused: true,
+            type: 'popup',
+            url: url,
+        });
+
+        setTimeout(async () => {
+            while (waitingForRequestPage) {
+                await sleep(50);
+            }
+
+            chrome.runtime.sendMessage({
+                message: "transactionRequestData",
+                data: request.data,
+                assignedWalletName: assignedWallet
+            }, (result) => {
+                if (chrome.runtime.lastError) {
+                    sendResponse({
+                        error: 'cancelled'
+                    });
+                } else {
+                    sendResponse(result);
+                }
+                requestPopupWindow = null;
+            });
+        }, 50);
+    })
+}
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 let creating; // A global promise to avoid concurrency issues
-async function setupOffscreenSandbox() {
+async function setupOffscreenSandbox(sender) {
     // Check all windows controlled by the service worker to see if one 
     // of them is the offscreen document with the given path
     const offscreenUrl = chrome.runtime.getURL('offscreen.html');
@@ -212,28 +237,98 @@ async function setupOffscreenSandbox() {
         });
         let created = await creating;
         creating = null;
-        await authenticateOffscreen();
+
+        await authenticateOffscreenSecurely(sender);
         return created;
     }
 }
 
-// Send message to offscreen document
-async function authenticateOffscreen() {
+async function authenticateOffscreenSecurely(sender) {
+    if (!portToOffscreen) {
+        portToOffscreen = chrome.runtime.connect({ name: "secure-auth-channel" });
+        portToOffscreen.onDisconnect.addListener(function () {
+            console.log('we disconnected with offscreen.');
+
+            chrome.tabs.sendMessage(
+                portToOffscreen.clientTabId,
+                { message: 'NovioDisconnectedClient', target: 'content' }
+            );
+
+            portToOffscreen = undefined;
+        });
+    }
+
     let lastUsedName = (await chrome.storage.local.get(["lastUsedAccountName"])).lastUsedAccountName;
     const storedSession = (await chrome.storage.session.get(["session"])).session;
-    if (storedSession == null) {
-        return null;
-    }
+    if (!storedSession) return;
+
     let decrypted = await aesGcmDecrypt(storedSession.a, storedSession.b);
+    let accounts = await chrome.storage.local.get(["accountStore"]);
+    let walletJSON = accounts.accountStore[lastUsedName];
 
-    var accounts = await chrome.storage.local.get(["accountStore"]);
-    var walletJSON = accounts.accountStore[lastUsedName];
-
-    chrome.runtime.sendMessage({
+    portToOffscreen.clientTabId = sender.tab?.id;
+    portToOffscreen.postMessage({
         message: "clientAuthenticate",
         walletJson: walletJSON,
         walletPassword: decrypted,
+        clientTabId: sender.tab?.id,
     });
+}
+
+async function handleOffscreenMessages(request, sender, sendResponse) {
+
+    if (request.clientTabId == null) {
+        throw new Error("Offscreen message received which has no target tab.");
+    }
+
+    //This is how we close the offscreen document.
+    //TODO: identify when the website disconnects, closes/refreshes tab, so we can close offscreen.
+    //chrome.offscreen.closeDocument();
+
+
+    if (request.message === 'onNovioClientPing') {
+        chrome.tabs.sendMessage(
+            request.clientTabId,
+            { message: 'onNovioClientPing', target: 'content', data: request.data }
+        ).then(response => {
+            sendResponse({ success: true, response });
+        }).catch((onError) => {
+            console.warn('client connection to tab lost, closing offscreen document...', onError);
+            try {
+                chrome.offscreen.closeDocument();
+            } catch (error) {
+            }
+            sendResponse({ error: onError.message });
+        });
+        return true; // We're sending an async response
+    }
+    else if (request.message === 'NovioConnectedClient') {
+        chrome.tabs.sendMessage(
+            request.clientTabId,
+            { message: 'NovioConnectedClient', target: 'content', data: request.data }
+        );
+        sendResponse({ success: true });
+        return false; // We're sending an async response
+    }
+    else if (request.message === 'NovioDisconnectedClient') {
+        chrome.tabs.sendMessage(
+            request.clientTabId,
+            { message: 'NovioDisconnectedClient', target: 'content', data: request.data }
+        );
+        sendResponse({ success: true });
+        return false; // We're sending an async response
+    }
+    else if (request.message === 'onNovioClientMessage') {
+        chrome.tabs.sendMessage(
+            request.clientTabId,
+            { message: 'onNovioClientMessage', target: 'content', data: request.data }
+        ).then(() => {
+            sendResponse({ success: true });
+        }).catch((error) => {
+            sendResponse({ error: error.message });
+        });
+        return true; // We're sending an async response
+    }
 }
 
 async function aesGcmDecrypt(ciphertext, password) {
@@ -258,4 +353,19 @@ async function aesGcmDecrypt(ciphertext, password) {
     } catch (e) {
         throw new Error('Decrypt failed');
     }
+}
+
+async function setTabWallet(tabId, name) {
+    await chrome.storage.session.set({
+        [tabId]: name
+    });
+}
+
+async function getTabWallet(tabId) {
+    try {
+        const result = await chrome.storage.session.get([tabId]);
+        return result[tabId];
+    } catch (error) {
+    }
+    return null;
 }

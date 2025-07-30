@@ -1,13 +1,19 @@
-let myAddr = "Loading...";
 let balance = "Loading...";
 let wallet;
 let client;
+
+const pendingRequests = new Map();
+
+const seedServer = 'http://85.215.219.214:30003';
 
 function createWallet(password, seed) {
     try {
         let newWallet = new nkn.Wallet({
             seed: seed,
             password: password,
+            rpcServerAddr: seedServer,
+            tls: false,
+            encrypt: false,
         });
         return newWallet.toJSON();
     } catch (error) {
@@ -17,18 +23,28 @@ function createWallet(password, seed) {
 
 function openWallet(json, password) {
     try {
-        wallet = nkn.Wallet.fromJSON(json, { password: password, tls: true });
+
+        wallet = nkn.Wallet.fromJSON(json,
+            {
+                password: password,
+                rpcServerAddr: seedServer,
+                tls: false,
+                encrypt: false,
+                //async: true, TODO: make this flow async for way faster load times.
+            });
+
         this.memorypool = new MemoryPool(nkn, wallet.options.rpcServerAddr);
-        myAddr = wallet.address;
+
         return { status: "SUCCESS", publicKey: wallet.account.key.publicKey };
     } catch (error) {
+        console.log('open wallet ERROR:' + error.message);
         return { status: error.message, seed: null };
     }
 }
 
 window.addEventListener('message', async function (event) {
     if (event.data.cmd == "getAddress") {
-        event.source.postMessage({ uuid: event.data.uuid, reply: myAddr }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: wallet.address }, "*");
     }
     else if (event.data.cmd == "getBalance") {
         await wallet.getBalance(event.data.addr).then((value) => {
@@ -55,7 +71,7 @@ window.addEventListener('message', async function (event) {
         });
     } else if (event.data.cmd == "signMessage") {
         signChallenge(event.data.data).then(async (result) => {
-            event.source.postMessage({ uuid: event.data.uuid, reply: { signature: result, publicKey: wallet.account.key.publicKey } }, "*");
+            event.source.postMessage({ uuid: event.data.uuid, reply: { signature: result, publicKey: wallet.account.key.publicKey, address: wallet.address } }, "*");
         }).catch((error) => {
             event.source.postMessage({ uuid: event.data.uuid, reply: { error: error.message } }, "*");
         });
@@ -72,9 +88,16 @@ window.addEventListener('message', async function (event) {
     } else if (event.data.cmd == "getClient") {
         event.source.postMessage({ uuid: event.data.uuid, reply: await getClient(event.source) }, "*");
     } else if (event.data.cmd == "clientSend") {
-        event.source.postMessage({ uuid: event.data.uuid, reply: await clientSend(event.data.data.addr, event.data.data.payload) }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: await clientSend(event.source, event.data.data.addr, event.data.data.payload, event.data.data.options, event.data.data.requestId) }, "*");
     } else if (event.data.cmd == "pingClient") {
         event.source.postMessage({ uuid: event.data.uuid, reply: client.isReady }, "*");
+    }
+    else if (event.data.cmd == "disconnectClient") {
+        if (client != null) {
+            await client.close();
+        }
+        client = null;
+        event.source.postMessage({ uuid: event.data.uuid }, "*");
     }
 });
 
@@ -156,11 +179,12 @@ async function getRegistrant(name) {
 async function getClient(eventSource) {
     client = new nkn.MultiClient({
         seed: wallet.account.key.seed,
-        rpcServerAddr: 'http://85.215.219.214:30003'
+        rpcServerAddr: seedServer,
+        tls: false,
+        encrypt: false,
     });
 
     client.onMessage(({ src, payload }) => {
-        console.log('Receive message', payload, 'from', src);
         eventSource.postMessage({ clientMsg: payload, clientSrc: src }, "*");
     });
 
@@ -171,11 +195,11 @@ async function getClient(eventSource) {
     });
 }
 
-async function clientSend(addr, payload) {
+async function clientSend(eventSource, addr, payload, options, requestId) {
     let retryCount = 0;
-    while (!client.isReady) {
+    while (client == null || !client.isReady) {
         await new Promise(r => setTimeout(r, 2000));
-        console.log(`[${retryCount}] client not ready to send - received:`, payload);
+
         retryCount++;
 
         if (retryCount == 15) {
@@ -183,14 +207,18 @@ async function clientSend(addr, payload) {
         }
     }
 
+    const id = requestId || crypto.randomUUID();
+
     await client.send(
         addr,
         payload,
+        options
     ).then((reply) => {
         // The reply here can be either string or Uint8Array
-        console.log('Receive reply:', reply);
+        eventSource.postMessage({ clientMsg: reply, clientSrc: addr, replyTo: id }, "*");
     }).catch((e) => {
         // This will most likely to be timeout
+        eventSource.postMessage({ error: e, clientSrc: addr, replyTo: id }, "*");
         console.warn('Sandbox send failed:', e);
     });
 }

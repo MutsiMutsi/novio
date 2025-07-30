@@ -149,3 +149,43 @@ hr {
     -ms-user-select: none;
     user-select: none;
 }
+
+/* Wallet Banner Styles */
+.wallet-banner {
+    background: #ffffff12;
+    color: #ffffffbd;
+    padding: 4px 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.wallet-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.wallet-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.wallet-details h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.wallet-address {
+    margin: 2px 0 0 0;
+    font-size: 16px;
+    opacity: 0.9;
+    font-family: monospace;
+}
+
+.badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+}

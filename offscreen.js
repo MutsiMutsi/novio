@@ -1,53 +1,186 @@
-var iframe = document.getElementById('sandboxFrame');
+let iframe = document.getElementById('sandboxFrame');
+let pingInterval = null;
+let clientTabId = -1;
 
-//Listen to foreground/background messages
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.message == 'clientSend') {
-        await postToSandbox({ cmd: 'clientSend', data: { addr: request.data.addr, payload: request.data.payload } });
-    } else if (request.message == 'clientAuthenticate') {
-        let result = await postToSandbox({ cmd: 'openWallet', json: request.walletJson, password: request.walletPassword });
-        await initClient(sendResponse);
 
-        //Ping client
-        setInterval(async () => {
-            let pingResponse = await postToSandbox({ cmd: 'pingClient' });
-            chrome.runtime.sendMessage({
-                message: "onNovioClientPing",
-                data: { clientReady: pingResponse }
-            });
-        }, 3000);
+chrome.runtime.onConnect.addListener((port) => {
+    const expectedSenderUrl = `chrome-extension://${chrome.runtime.id}/background.js`;
 
-        return true;
+    //ignore novio-contentScript we dont need this.
+    if (port.name === 'novio-contentScript') {
+        return;
     }
+
+    if (port.sender?.url !== expectedSenderUrl || port.name !== "secure-auth-channel") {
+        console.warn("Rejected untrusted port connection from:", port.sender?.url);
+        port.disconnect();
+        return;
+    }
+
+    port.onMessage.addListener((msg) => {
+        if (msg.message === "clientAuthenticate") {
+            clientTabId = msg.clientTabId;
+            handleClientAuthenticate(msg);
+        }
+    });
 });
 
-//Trigger reload to make sure the sandbox libraries are loaded and available when popoup opens.
-/*iframe.src += '';
-iframe.onload = function () {
-    initClient();
-};*/
+// Helper function to safely send runtime messages
+function sendRuntimeMessage(message) {
+    try {
+        message.clientTabId = clientTabId;
+        message.fromOffscreen = true;
+        chrome.runtime.sendMessage(message);
+    } catch (error) {
+        console.error('Failed to send runtime message:', error);
+    }
+}
+
+// Listen to foreground/background messages
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+
+    if (request.fromOffscreen) {
+        //Don't handle our own requests!!!
+        return false;
+    }
+
+    if (request.target != 'offscreen') {
+        //If its not for us we dont need it!
+        return false;
+    }
+
+    if (clientTabId == -1) {
+        //throw new Error("CLIENT TAB WAS NOT DEFINED");
+        return false;
+    }
+    if (request.tabId !== clientTabId) {
+        //console.log(request);
+        //console.log(`GOT: ${request.tabId} EXPECTED: ${clientTabId}`);
+        //throw new Error("WRONG CLIENT TAB RECEIVED FOR REQUEST");
+        return false;
+    }
+
+    if (request.message == 'clientSend') {
+        handleClientSend(request, sendResponse);
+        return true; // Keep channel open for async response
+    }
+    else if (request.message == 'clientDisconnect') {
+        handleClientDisconnect(request, sendResponse);
+        return true; // Keep channel open for async response
+    }
+    else if (request.message == 'onNovioSignOutRequest') {
+        handleClientDisconnect(request, sendResponse);
+        return true; // Keep channel open for async response
+    }
+    return false; // No async response needed
+});
+
+async function handleClientSend(request, sendResponse) {
+    try {
+        await postToSandbox({
+            cmd: 'clientSend',
+            data: {
+                addr: request.data.addr,
+                payload: request.data.payload,
+                options: request.data.options,
+                requestId: request.data.requestId
+            }
+        });
+        sendResponse({ success: true });
+    } catch (error) {
+        sendResponse({ error: error.message });
+    }
+}
+
+async function handleClientAuthenticate(request, sendResponse) {
+    try {
+        sendRuntimeMessage({ message: "NovioDisconnectedClient", });
+
+        await postToSandbox({
+            cmd: 'openWallet',
+            json: request.walletJson,
+            password: request.walletPassword
+        });
+
+        await initClient(sendResponse);
+
+        sendRuntimeMessage({ message: "NovioConnectedClient", });
+
+        // Clear any existing ping interval
+        if (pingInterval) {
+            clearInterval(pingInterval);
+        }
+
+        // Ping client with error handling
+        pingInterval = setInterval(async () => {
+            try {
+                let pingResponse = await postToSandbox({ cmd: 'pingClient' });
+                sendRuntimeMessage({
+                    message: "onNovioClientPing",
+                    data: { clientReady: pingResponse }
+                });
+            } catch (error) {
+                console.error('Ping failed:', error);
+                // Optionally clear interval if ping consistently fails
+            }
+        }, 3000);
+    } catch (error) {
+        throw new Error("Failed to authenticate client: " + error.message);
+    }
+}
+
+async function handleClientDisconnect(request, sendResponse) {
+    try {
+        let result = await postToSandbox({
+            cmd: 'disconnectClient'
+        });
+
+        // Remove existing listener
+        window.removeEventListener('message', messageHandler);
+
+        // Clear any existing ping interval
+        if (pingInterval) {
+            clearInterval(pingInterval);
+        }
+
+        sendResponse({ success: true, result: result });
+    } catch (error) {
+        sendResponse({ error: error.message });
+    }
+}
 
 async function initClient(sendResponse) {
-    let addr = await postToSandbox({ cmd: 'getClient' });
-    window.addEventListener('message', function messageHandler(event) {
+    try {
+        let addr = await postToSandbox({ cmd: 'getClient' });
+        // Remove existing event listener to prevent duplicates
+        window.removeEventListener('message', messageHandler);
+        window.addEventListener('message', messageHandler);
+        return addr;
+    } catch (error) {
+        sendResponse({ error: error.message });
+        throw error;
+    }
+}
 
-        if (event.data.clientMsg == null) {
-            return;
+function messageHandler(event) {
+    if (event.data.clientMsg == null) {
+        return;
+    }
+
+    sendRuntimeMessage({
+        message: "onNovioClientMessage",
+        data: {
+            Sender: event.data.clientSrc,
+            Message: event.data.clientMsg,
+            replyTo: event.data.replyTo
         }
-        let msg = JSON.parse(event.data.clientMsg);
-
-        chrome.runtime.sendMessage({
-            message: "onNovioClientMessage",
-            data: { Sender: event.data.clientSrc, Message: msg }
-        }, (result) => {
-            if (chrome.runtime.lastError) {
-                sendResponse({
-                    error: chrome.runtime.lastError
-                });
-            } else {
-                sendResponse(result);
-            }
-            requestPopupWindow = null;
-        });
     });
 }
+
+// Cleanup on unload
+window.addEventListener('beforeunload', () => {
+    if (pingInterval) {
+        clearInterval(pingInterval);
+    }
+    window.removeEventListener('message', messageHandler);
+});

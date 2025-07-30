@@ -175,12 +175,18 @@ function onAccountOpened(account) {
     currentAccount = account;
     setLastUsedAccountName(currentAccount.Name);
 
-    document.getElementById("AccountName").innerHTML = currentAccount.Name;
+    //Set header.
+    const shortenedAddr = currentAccount.Address.substring(0, 10) + "..." + currentAccount.Address.substring(26);
+    document.getElementById('walletName').innerText = currentAccount.Name;
+    document.getElementById('walletAddress').innerText = shortenedAddr;
+    generatePictogram(document.getElementById("walletAvatar"), currentAccount.Address, 32);
+
     StartDashboard();
 
     //Initiate
     chrome.runtime.sendMessage({
-        message: "executeForeground",
+        message: "NovioAccountOpened",
+        account: currentAccount,
     });
 
     balanceCounterUpdating = false;
