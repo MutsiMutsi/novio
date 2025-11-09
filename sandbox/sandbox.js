@@ -144,7 +144,7 @@ async function signChallenge(challenge) {
 async function sendTransaction(transaction, fee) {
     var options = {
         fee: fee,
-        attrs: transaction.data.slice(-1)
+        attrs: transaction.data.slice(-1)[0]
     }
 
     switch (transaction.type) {
