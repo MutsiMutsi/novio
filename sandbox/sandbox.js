@@ -86,7 +86,7 @@ window.addEventListener('message', async function (event) {
     } else if (event.data.cmd == "exportSeed") {
         event.source.postMessage({ uuid: event.data.uuid, reply: wallet.account.key.seed }, "*");
     } else if (event.data.cmd == "getClient") {
-        event.source.postMessage({ uuid: event.data.uuid, reply: await getClient(event.source) }, "*");
+        event.source.postMessage({ uuid: event.data.uuid, reply: await getClient(event.source, event.data.tls, event.data.encrypt, event.data.identifier) }, "*");
     } else if (event.data.cmd == "clientSend") {
         event.source.postMessage({ uuid: event.data.uuid, reply: await clientSend(event.source, event.data.data.addr, event.data.data.payload, event.data.data.options, event.data.data.requestId) }, "*");
     } else if (event.data.cmd == "pingClient") {
@@ -176,12 +176,13 @@ async function getRegistrant(name) {
     }
 }
 
-async function getClient(eventSource) {
+async function getClient(eventSource, tls, encrypt, identifier) {
     client = new nkn.MultiClient({
         seed: wallet.account.key.seed,
         rpcServerAddr: seedServer,
-        tls: false,
-        encrypt: false,
+        tls: tls,
+        encrypt: encrypt,
+        identifier: identifier
     });
 
     client.onMessage(({ src, payload }) => {

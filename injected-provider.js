@@ -9,24 +9,23 @@
             this.address = null;
         }
 
-        sendSignatureRequest(message) {
+        sendSignatureRequest(message, useClient = false, useTls = false, useMessageEncryption = false, clientIdentifier = '') {
             const signRequestEvent = new CustomEvent("onNovioSignRequest", {
                 bubbles: true,
                 cancelable: false,
                 detail: {
-                    data: message,
-                    allowClient: true,
+                    data: { message: message, useClient: useClient, tls: useTls, encrypt: useMessageEncryption, identifier: clientIdentifier }
                 },
             });
             document.dispatchEvent(signRequestEvent);
 
-            window.postMessage({
-                type: 'onNovioSignRequest',
-                payload: {
-                    data: message,
-                    allowClient: true,
-                }
-            }, '*');
+            // window.postMessage({
+            //     type: 'onNovioSignRequest',
+            //     payload: {
+            //         data: message,
+            //         allowClient: true,
+            //     }
+            // }, '*');
 
             return new Promise((resolve, reject) => {
                 window.addEventListener("onNovioSignResponse", (event) => {
@@ -40,7 +39,7 @@
         }
 
         sendSignOutRequest() {
-            
+
             window.postMessage({
                 type: 'onNovioSignOutRequest',
             }, '*');
@@ -100,9 +99,9 @@
             }
         }
 
-        async novioSignIn() {
+        async novioSignIn(useClient, useTls, useMessageEncryption, clientIdentifier) {
             const randomChallenge = crypto.randomUUID();
-            const result = await this.sendSignatureRequest(randomChallenge);
+            const result = await this.sendSignatureRequest(randomChallenge, useClient, useTls, useMessageEncryption, clientIdentifier);
             this.pubkey = result.data.publicKey;
             this.address = result.data.address;
             const isValid = await this.verifyMessage(randomChallenge, result.data.signature, result.data.publicKey);

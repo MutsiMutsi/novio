@@ -105,9 +105,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function openSignRequest(request, sendResponse, sender) {
     chrome.windows.get(sender.tab.windowId, async (tabWindow) => {
         const width = 440;
-        let height = 310;
+        let height = 520;
         const url = 'request/sign.html';
-        if (request.allowClient) {
+        if (request.data.useClient) {
             height += 20;
         }
 
@@ -133,7 +133,6 @@ async function openSignRequest(request, sendResponse, sender) {
                 chrome.runtime.sendMessage({
                     message: "signRequestData",
                     data: request.data,
-                    allowClient: request.allowClient,
                     account: currentAccount
                 }, async (result) => {
                     if (chrome.runtime.lastError) {
@@ -148,13 +147,13 @@ async function openSignRequest(request, sendResponse, sender) {
 
                         setTabWallet('' + sender.tab?.id, currentAccount.Name);
 
-                        if (request.allowClient) {
+                        if (request.data.useClient) {
                             try {
                                 await chrome.offscreen.closeDocument();
                             } catch (error) {
                                 //We clean up first, but if there is no offscreen document we dont want any errors to show, thats fine.
                             }
-                            await setupOffscreenSandbox(sender);
+                            await setupOffscreenSandbox(sender, request.data);
                         }
 
                         sendResponse(result);
@@ -213,7 +212,7 @@ function sleep(ms) {
 }
 
 let creating; // A global promise to avoid concurrency issues
-async function setupOffscreenSandbox(sender) {
+async function setupOffscreenSandbox(sender, data) {
     // Check all windows controlled by the service worker to see if one 
     // of them is the offscreen document with the given path
     const offscreenUrl = chrome.runtime.getURL('offscreen.html');
@@ -238,12 +237,12 @@ async function setupOffscreenSandbox(sender) {
         let created = await creating;
         creating = null;
 
-        await authenticateOffscreenSecurely(sender);
+        await authenticateOffscreenSecurely(sender, data);
         return created;
     }
 }
 
-async function authenticateOffscreenSecurely(sender) {
+async function authenticateOffscreenSecurely(sender, data) {
     if (!portToOffscreen) {
         portToOffscreen = chrome.runtime.connect({ name: "secure-auth-channel" });
         portToOffscreen.onDisconnect.addListener(function () {
@@ -272,6 +271,7 @@ async function authenticateOffscreenSecurely(sender) {
         walletJson: walletJSON,
         walletPassword: decrypted,
         clientTabId: sender.tab?.id,
+        data: data,
     });
 }
 

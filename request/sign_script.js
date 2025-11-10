@@ -72,14 +72,22 @@ function generateValueTitleHtml(title) {
 
 
 function generateSignDataHtml(data) {
+    console.log(data);
+
     let html = '';
     html += `<h4>Signature Request</h4>`;
-    html += generateValueBoxHtml(data.data);
-
-    if (data.allowClient) {
+    html += generateValueBoxHtml(data.data.message);
+    if (data.data.useClient) {
         html += `<div style="width: 100%; text-align:center;'">
 <sup style="color: var(--bs-primary);width: 100%;text-align: center;">This site is requesting permission to send and receive messages over NKN.</sup>
 </div>`;
+
+        html += `<h6>Using node TLS Connection:</h6>`;
+        html += generateValueBoxHtml(data.data.tls ?? "false");
+        html += `<h6>Encrypting node messages:</h6>`;
+        html += generateValueBoxHtml(data.data.encrypt ?? "false");
+        html += `<h6>Node client identifier:</h6>`;
+        html += generateValueBoxHtml(data.data.identifier ?? "");
     }
 
     return html;

@@ -20,7 +20,7 @@ chrome.runtime.onConnect.addListener((port) => {
     port.onMessage.addListener((msg) => {
         if (msg.message === "clientAuthenticate") {
             clientTabId = msg.clientTabId;
-            handleClientAuthenticate(msg);
+            handleClientAuthenticate(msg, null, msg.data);
         }
     });
 });
@@ -92,7 +92,7 @@ async function handleClientSend(request, sendResponse) {
     }
 }
 
-async function handleClientAuthenticate(request, sendResponse) {
+async function handleClientAuthenticate(request, sendResponse, data) {
     try {
         sendRuntimeMessage({ message: "NovioDisconnectedClient", });
 
@@ -102,7 +102,7 @@ async function handleClientAuthenticate(request, sendResponse) {
             password: request.walletPassword
         });
 
-        await initClient(sendResponse);
+        await initClient(sendResponse, data);
 
         sendRuntimeMessage({ message: "NovioConnectedClient", });
 
@@ -149,9 +149,9 @@ async function handleClientDisconnect(request, sendResponse) {
     }
 }
 
-async function initClient(sendResponse) {
+async function initClient(sendResponse, data) {
     try {
-        let addr = await postToSandbox({ cmd: 'getClient' });
+        let addr = await postToSandbox({ cmd: 'getClient', tls: data.tls, encrypt: data.encrypt, identifier: data.identifier });
         // Remove existing event listener to prevent duplicates
         window.removeEventListener('message', messageHandler);
         window.addEventListener('message', messageHandler);

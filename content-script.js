@@ -73,7 +73,6 @@ function novioSignRequestEventHandler(event) {
     chrome.runtime.sendMessage({
         message: "onNovioSignRequest",
         data: event.detail.data,
-        allowClient: event.detail.allowClient,
     }, (response) => {
         const signResponseEvent = new CustomEvent("onNovioSignResponse", {
             bubbles: true,
