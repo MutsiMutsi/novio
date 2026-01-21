@@ -129,7 +129,7 @@ function getTransaction(hash) {
 }
 
 async function signChallenge(challenge) {
-    const prefixedMsg = `NKN Signed Message:\n${challenge}`;
+    const prefixedMsg = `NKN Signed Message:\n${challenge.message}`;
 
     var encoder = new TextEncoder();
     var encodedMsg = encoder.encode(prefixedMsg);
